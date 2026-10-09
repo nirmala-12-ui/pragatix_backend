@@ -50,6 +50,10 @@ neopat:
     driver-class-name: com.mysql.cj.jdbc.Driver
   api-key: ${NEOPAT_API_KEY:neopat_super_secret_webhook_key_2026}
 
+seed:
+  play-review-student:
+    enabled: ${SEED_PLAY_REVIEW_STUDENT_ENABLED:false}
+
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID:}
   auth-token: ${TWILIO_AUTH_TOKEN:}
