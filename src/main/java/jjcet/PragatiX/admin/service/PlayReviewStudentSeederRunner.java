@@ -7,13 +7,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Component
+@ConditionalOnProperty(name = "seed.play-review-student.enabled", havingValue = "true")
 public class PlayReviewStudentSeederRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(PlayReviewStudentSeederRunner.class);

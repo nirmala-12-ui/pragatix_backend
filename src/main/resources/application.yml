@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT}
+  port: ${PORT:${SERVER_PORT:8080}}
   forward-headers-strategy: framework
   tomcat:
     accesslog:
@@ -67,7 +67,11 @@ app:
       secret: ${DATABASE_ENCRYPTION_SECRET:PragatiXAES256GCMDatabaseEncryptionSecretKey2026!}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://pragatix.in,https://www.pragatix.in}
+
+seed:
+  play-review-student:
+    enabled: ${SEED_PLAY_REVIEW_STUDENT_ENABLED:false}
 
 springdoc:
   api-docs:
@@ -110,24 +114,24 @@ management:
 
 zepto:
   mail:
-    url: ${ZEPTO_MAIL_URL}
-    token: ${ZEPTO_MAIL_TOKEN}
-    template-key: ${ZEPTO_MAIL_TEMPLATE_KEY}
-    sender-address: ${ZEPTO_MAIL_SENDER_ADDRESS}
-    sender-name: ${ZEPTO_MAIL_SENDER_NAME}
+    url: ${ZEPTO_MAIL_URL:https://api.zeptomail.in/v1.1/email}
+    token: ${ZEPTO_MAIL_TOKEN:}
+    template-key: ${ZEPTO_MAIL_TEMPLATE_KEY:}
+    sender-address: ${ZEPTO_MAIL_SENDER_ADDRESS:noreply@pragatix.in}
+    sender-name: ${ZEPTO_MAIL_SENDER_NAME:PragatiX}
 
 sms:
-  provider: ${SMS_PROVIDER}
-  test-endpoint-enabled: ${SMS_TEST_ENDPOINT_ENABLED}
+  provider: ${SMS_PROVIDER:AIRTEL}
+  test-endpoint-enabled: ${SMS_TEST_ENDPOINT_ENABLED:false}
 
 airtel:
   sms:
-    enabled: ${AIRTEL_SMS_ENABLED}
-    url: ${AIRTEL_SMS_URL}
-    customer-id: ${AIRTEL_CUSTOMER_ID}
-    username: ${AIRTEL_USERNAME}
-    password: ${AIRTEL_PASSWORD}
-    dlt-template-id: ${AIRTEL_DLT_TEMPLATE_ID}
-    entity-id: ${AIRTEL_ENTITY_ID}
-    source-address: ${AIRTEL_SOURCE_ADDRESS}
-    message-type: ${AIRTEL_MESSAGE_TYPE}
+    enabled: ${AIRTEL_SMS_ENABLED:false}
+    url: ${AIRTEL_SMS_URL:}
+    customer-id: ${AIRTEL_CUSTOMER_ID:}
+    username: ${AIRTEL_USERNAME:}
+    password: ${AIRTEL_PASSWORD:}
+    dlt-template-id: ${AIRTEL_DLT_TEMPLATE_ID:}
+    entity-id: ${AIRTEL_ENTITY_ID:}
+    source-address: ${AIRTEL_SOURCE_ADDRESS:}
+    message-type: ${AIRTEL_MESSAGE_TYPE:1}
