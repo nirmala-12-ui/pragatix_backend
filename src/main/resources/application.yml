@@ -73,10 +73,6 @@ app:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://pragatix.in,https://www.pragatix.in}
 
-seed:
-  play-review-student:
-    enabled: ${SEED_PLAY_REVIEW_STUDENT_ENABLED:false}
-
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}
