@@ -41,7 +41,6 @@ public class PlayReviewStudentSeederRunner implements ApplicationRunner {
     }
 
     @Override
-    @Transactional
     public void run(ApplicationArguments args) {
         try {
             log.info("PLAY REVIEW STUDENT SEEDER: Checking and seeding pragatix.play.review@gmail.com...");
@@ -72,6 +71,7 @@ public class PlayReviewStudentSeederRunner implements ApplicationRunner {
             }
 
             student.setEmail(email);
+            student.setPassword("");
             student.setFullName(fullName);
             student.setPhoneNo(mobile);
             student.setDepartment(cyberDept);

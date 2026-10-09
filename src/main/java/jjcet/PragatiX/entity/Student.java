@@ -82,6 +82,9 @@ public class Student implements SoftDeletable {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(name = "password", nullable = true, length = 255)
+    private String password = "";
+
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
@@ -260,6 +263,14 @@ public class Student implements SoftDeletable {
         if (email != null && !email.trim().isEmpty()) {
             this.email = email.trim();
         }
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password != null ? password : "";
     }
 
     public String getFullName() {
