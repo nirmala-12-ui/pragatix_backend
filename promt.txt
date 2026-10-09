@@ -1,0 +1,1432 @@
+MASTER PROMPT — PRAGATIX/SPDMS 1-MONTH COMPLETE END-TO-END MOCK TEST
+
+I need you to perform a complete end-to-end mock test of the existing PragatiX/SPDMS system using REAL DATABASE TEST DATA in the current development/test environment.
+
+IMPORTANT:
+This is a TEST/SIMULATION exercise.
+
+DO NOT:
+- Modify production data.
+- Delete or overwrite existing real/non-test users.
+- Change unrelated application logic.
+- Bypass existing business rules.
+- Directly manipulate tables in a way that bypasses application services unless required for controlled test-data setup.
+- Disable security validations.
+- Fake successful results.
+
+You must use the EXISTING application logic, services, controllers, repositories, activity engine, XP engine, attendance engine, team engine, badge system, notification/SMS logic, and role/permission logic wherever possible.
+
+The objective is to verify that the COMPLETE student progression lifecycle works correctly for one full month.
+
+========================================================
+1. FIRST — INSPECT THE ENTIRE EXISTING SYSTEM
+========================================================
+
+Before inserting any data, inspect the existing project.
+
+Understand:
+
+- Student module
+- Staff/Teacher module
+- Department module
+- Section module
+- Activity module
+- Activity types
+- Award activities
+- Penalty activities
+- Individual activities
+- Group activities
+- Stage progression logic
+- M/I/G threshold logic
+- XP calculation
+- Student points/history
+- Team creation logic
+- Team captain/vice-captain logic
+- Attendance module
+- Attendance streak engine
+- Daily attendance engine
+- Weekly attendance engine
+- Captain/Vice Captain engine
+- Badge request system
+- CC assignment
+- CC badge approval/acceptance
+- Guardian SMS notification
+- Audit log
+- Scheduler configuration
+- Manual engine trigger APIs
+- Existing staff/student role permissions
+- Existing database schema
+
+DO NOT assume table names or column names.
+
+Inspect the actual implementation and database schema first.
+
+========================================================
+2. TEST DATA SCOPE
+========================================================
+
+Create/use exactly 60 TEST STUDENTS under:
+
+Department:
+Electronics and Communication Engineering (ECE)
+
+Use test student identifiers:
+
+test600
+test601
+test602
+...
+test659
+
+IMPORTANT:
+test600-test659 = exactly 60 students.
+
+If the existing project requires additional mandatory fields such as:
+- register number
+- email
+- phone
+- year
+- semester
+- section
+- department
+- gender
+- DOB
+- guardian information
+
+populate them using clearly identifiable TEST values.
+
+Do not overwrite existing students.
+
+If any of these test users already exist:
+- inspect them
+- reuse only if they are clearly test users
+- otherwise create safe unique test records
+- never overwrite production/non-test student records.
+
+All 60 students must belong to ECE.
+
+Use the existing valid ECE department record.
+
+========================================================
+3. STAFF DATA
+========================================================
+
+Use test staff/users from:
+
+test661
+test662
+test663
+test664
+test665
+test666
+test667
+test668
+test669
+test670
+
+Use these test staff accounts to create/assign activities.
+
+IMPORTANT:
+
+Every activity should use different staff wherever the existing activity model supports staff ownership/creator/awarder.
+
+Do not use one staff member for every activity.
+
+Create a clear mapping:
+
+Staff → Activities created/awarded
+
+Record this mapping in the final report.
+
+If the application requires staff roles:
+- use valid existing staff roles
+- assign appropriate permissions
+- do not bypass role validation.
+
+========================================================
+4. ONE-MONTH TEST WINDOW
+========================================================
+
+Run the simulation for ONE COMPLETE MONTH.
+
+Preferred test period:
+
+2026-08-01 through 2026-08-31
+
+Use the existing attendance/activity/XP business logic for this historical test period.
+
+If the existing engine does not support historical backfill:
+- inspect how manual engine execution works
+- use the existing manual trigger/service mechanism
+- execute the engine for the required simulated date/period
+- DO NOT rewrite the production engine just to make the test pass.
+
+The final report must clearly state:
+
+Test Start Date
+Test End Date
+Number of simulated days
+Number of working/attendance days
+Number of weeks
+Engine execution dates/times
+
+========================================================
+5. STAGE 1 ACTIVITY SETUP
+========================================================
+
+For Stage 1, create activities according to the existing activity model.
+
+Stage 1 MUST contain:
+
+A. 4 activities total:
+- 3 Award-type activities
+- 1 Penalty-type activity
+
+B. 6 Individual Award activities
+
+C. 3 Group activities
+
+IMPORTANT:
+Understand how the existing system distinguishes:
+- Stage
+- Activity type
+- Award/Penalty
+- Individual
+- Group
+
+Do not create duplicate or contradictory activity definitions.
+
+Every activity should have:
+- unique name
+- correct stage
+- correct activity type
+- XP/points as appropriate
+- creator/awarder
+- date/period
+- status
+- any required configuration
+
+Use different test staff from test661-test670 across activities.
+
+Create a clear activity inventory.
+
+Example structure for final report:
+
+Stage 1
+---------
+Award Activities:
+1. ...
+2. ...
+3. ...
+
+Penalty Activity:
+1. ...
+
+Individual Award Activities:
+1. ...
+2. ...
+3. ...
+4. ...
+5. ...
+6. ...
+
+Group Activities:
+1. ...
+2. ...
+3. ...
+
+========================================================
+6. STUDENT ACTIVITY PARTICIPATION
+========================================================
+
+Over the one-month simulation, assign/award activities to the 60 students using the EXISTING activity workflow.
+
+Do not simply insert final XP directly into the student table.
+
+Use the existing application service/endpoint/engine that normally awards XP.
+
+The purpose is to verify:
+
+Activity
+   ↓
+Award/Penalty
+   ↓
+Points/XP transaction
+   ↓
+Student points/history
+   ↓
+Stage progression
+   ↓
+Team eligibility/progression
+
+For every student, maintain enough activity history to verify the progression rules.
+
+========================================================
+7. M / I / G THRESHOLD TEST
+========================================================
+
+The system has M / I / G progression thresholds.
+
+Inspect the actual implementation and determine exactly what:
+
+M
+I
+G
+
+mean in the existing system and how their thresholds are calculated.
+
+Do NOT assume the formula.
+
+For all 60 students:
+
+- Award activities must generate the required values.
+- Individual activities must generate the required values.
+- Group activities must generate the required values.
+- Students must satisfy the configured M/I/G thresholds for Stage 1 → Stage 2.
+
+The objective is to verify:
+
+Stage 1
+   ↓
+M threshold satisfied
+I threshold satisfied
+G threshold satisfied
+   ↓
+Stage 2 eligibility
+   ↓
+Stage 2 progression
+
+Record each student's:
+
+Student ID
+M value
+I value
+G value
+Required M threshold
+Required I threshold
+Required G threshold
+Pass/Fail
+Stage reached
+
+========================================================
+8. STAGE 1 TEAM FORMATION
+========================================================
+
+At Stage 1, teams must be formed correctly.
+
+Expected result:
+
+60 students
+   ↓
+6 teams
+   ↓
+10 members per team
+
+Team structure:
+
+Team 1 = 10 students
+Team 2 = 10 students
+Team 3 = 10 students
+Team 4 = 10 students
+Team 5 = 10 students
+Team 6 = 10 students
+
+Every team MUST have:
+
+- 1 Captain
+- 1 Vice Captain
+- Remaining 8 members
+
+Therefore:
+
+6 Captains
+6 Vice Captains
+48 regular members
+
+Use the EXISTING team formation/captain/vice-captain engine.
+
+DO NOT manually set captain/vice-captain flags in the database unless the existing service requires it for controlled test setup.
+
+Verify:
+- no student belongs to two teams
+- no team has more than 10 members
+- no team has fewer than 10 members
+- exactly one captain per team
+- exactly one vice captain per team
+- captain and vice captain are members of that team
+- captain != vice captain
+- all 60 students belong to exactly one team
+
+Record the complete team structure.
+
+========================================================
+9. STAGE 2 ACTIVITIES
+========================================================
+
+After Stage 1 progression and team formation are complete:
+
+Create and execute Stage 2 activities.
+
+Use the existing activity rules.
+
+Ensure Stage 2 contains meaningful:
+- award activities
+- individual activities where supported
+- group activities where supported
+- required progression activities
+
+Use test661-test670 staff accounts.
+
+Assign activities to students/teams through the existing application flow.
+
+Do not directly modify XP to force progression.
+
+Students must earn XP/points through the actual activity system.
+
+========================================================
+10. STAGE 2 → STAGE 3 THRESHOLD
+========================================================
+
+After Stage 2 activities:
+
+For each student verify:
+
+M threshold
+I threshold
+G threshold
+
+according to the actual configured rules.
+
+Expected:
+
+Stage 2
+   ↓
+Required activities
+   ↓
+M/I/G thresholds satisfied
+   ↓
+Stage 3 eligibility/progression
+
+Record:
+- Stage 2 starting values
+- Stage 2 activities
+- XP earned
+- M/I/G changes
+- final thresholds
+- whether progression happened
+- reason if progression failed
+
+Do NOT manually force Stage 3.
+
+If a student fails, identify exactly why.
+
+========================================================
+11. STAGE 3 ACTIVITIES
+========================================================
+
+Once Stage 3 eligibility is achieved:
+
+Create/execute Stage 3 activities using the existing system.
+
+Again verify:
+
+- Award activity
+- Individual activity
+- Group activity
+- XP
+- points history
+- M/I/G
+- stage state
+
+Use different staff wherever possible.
+
+The final report must clearly show the complete lifecycle:
+
+Stage 1
+  ↓
+Activities
+  ↓
+M/I/G
+  ↓
+Stage 2
+  ↓
+Team formation
+  ↓
+Stage 2 activities
+  ↓
+M/I/G
+  ↓
+Stage 3
+  ↓
+Stage 3 activities
+
+========================================================
+12. XP VALIDATION
+========================================================
+
+XP MUST be generated through the real activity/attendance/team engines.
+
+Do not directly set final XP values.
+
+For every student calculate:
+
+Initial XP
++
+Award activity XP
++
+Individual activity XP
++
+Group activity XP
++
+Attendance XP
++
+Weekly XP
+-
+Penalty XP
+=
+Final XP
+
+Verify that the actual database transactions/history match the expected calculation.
+
+For each student identify:
+
+- Which activity gave XP
+- Who awarded it
+- Date
+- Activity type
+- XP amount
+- Individual/group
+- Stage
+- Penalty if any
+- Attendance-related XP
+- Weekly XP
+- Final XP
+
+Cross-check:
+
+student total XP
+vs
+sum of XP transaction/history records
+
+Any mismatch must be reported.
+
+========================================================
+13. PENALTY TEST
+========================================================
+
+The Stage 1 penalty activity MUST actually be tested.
+
+Do not create the penalty activity and leave it unused.
+
+Apply penalty to selected test students through the existing application workflow.
+
+Verify:
+
+- penalty record created
+- correct student affected
+- correct activity identified
+- correct staff identified
+- correct date
+- correct penalty value
+- XP/points deducted according to actual rules
+- points history created
+- audit log created
+- final XP updated correctly
+
+Make sure penalty students are identifiable in the final report.
+
+========================================================
+14. ATTENDANCE — FULL MONTH
+========================================================
+
+For all 60 students:
+
+Create attendance records for the complete test month:
+
+2026-08-01 → 2026-08-31
+
+Use the existing attendance system.
+
+Do NOT simply set attendance summary values.
+
+Create actual daily attendance records wherever the application normally stores them.
+
+For normal test students:
+- mark them present for the required working days
+- use the existing attendance period/session rules
+
+The objective is to test:
+
+Daily Attendance Engine
++
+Weekly Attendance Engine
++
+Streak Engine
++
+Attendance XP/Penalty
++
+Student history
+
+========================================================
+15. STREAK TEST
+========================================================
+
+The students should receive attendance streaks through actual attendance records.
+
+Do NOT directly set streak values.
+
+Verify that:
+
+Attendance records
+   ↓
+Daily attendance engine
+   ↓
+Streak calculation
+   ↓
+Student streak value/history
+
+matches the expected result.
+
+Record:
+
+Student
+Date
+Attendance status
+Previous streak
+New streak
+Engine execution
+XP/penalty if any
+
+If the engine skips days with no attendance according to the existing rule, respect the existing rule.
+
+========================================================
+16. FIVE GUARDIAN SMS TEST STUDENTS
+========================================================
+
+Select exactly 5 students from the 60 test students.
+
+For these 5 students:
+
+Guardian phone number MUST be:
+
+6380170548
+
+Use the existing guardian phone field.
+
+These 5 students should otherwise have valid test data.
+
+During the one-month attendance simulation:
+
+- introduce controlled absent days for these 5 students
+- ensure they have present attendance on other days
+- create at least one absence event that triggers the existing guardian SMS logic
+
+The SMS should follow the existing absentee notification template/configuration.
+
+Verify:
+
+Student name
+Date
+Guardian number
+SMS template
+SMS provider/service
+Delivery request
+Notification record/log
+Audit record if supported
+
+IMPORTANT:
+
+Do not send unnecessary repeated real SMS messages during testing.
+
+If the existing environment has a test/mock SMS mode:
+- use it and capture the generated SMS.
+
+If the existing SMS provider is configured for real delivery:
+- send only the minimum controlled test messages required to verify the flow.
+- do not generate hundreds of SMS messages.
+
+The final report must distinguish:
+
+SMS generated
+SMS attempted
+SMS actually delivered
+SMS mocked/tested
+
+========================================================
+17. DAILY ATTENDANCE ENGINE
+========================================================
+
+Configure the daily attendance engine for the test.
+
+Set its runtime to a convenient current-time test execution window.
+
+Use the existing scheduler/manual trigger.
+
+Do NOT rewrite the engine.
+
+Run the daily engine after the simulated attendance data is ready.
+
+Verify:
+
+- absent students
+- partial absent students if applicable
+- present students
+- streak increments
+- streak resets
+- attendance XP
+- penalties
+- duplicate protection
+
+Test both:
+- automatic execution
+- manual execution
+
+if the existing system supports both.
+
+Verify that running the same period twice does NOT create duplicate XP/penalty/streak records.
+
+========================================================
+18. WEEKLY ATTENDANCE ENGINE
+========================================================
+
+Configure the weekly engine.
+
+Set its runtime to a convenient current-time test execution.
+
+Run it against the simulated academic week data.
+
+Verify:
+
+- students present for all required working days
+- perfect-week eligibility
+- weekly XP
+- non-eligible students
+- duplicate protection
+
+Confirm that weekly XP is awarded only when the actual weekly attendance criteria are satisfied.
+
+Record:
+
+Week
+Student
+Working days
+Present days
+Absent days
+Eligible?
+XP awarded
+Engine execution timestamp
+
+========================================================
+19. CAPTAIN / VICE CAPTAIN ENGINE
+========================================================
+
+Use the existing Captain/Vice Captain engine.
+
+Configure its runtime to a convenient current-time execution.
+
+Run the engine.
+
+Verify:
+
+- correct teams
+- correct captain
+- correct vice captain
+- captain/vice captain eligibility
+- XP/points if applicable
+- no duplicate awards
+- correct history records
+
+Do NOT manually fake engine output.
+
+========================================================
+20. BADGE REQUEST TEST
+========================================================
+
+For the required eligible students:
+
+Create badge requests through the actual application workflow.
+
+Do NOT directly mark badges as approved in the database.
+
+Verify:
+
+Student
+   ↓
+Eligible badge
+   ↓
+Badge request
+   ↓
+CC assignment
+   ↓
+CC acceptance
+   ↓
+Admin/Super Admin approval where applicable
+   ↓
+Badge status
+
+========================================================
+21. CC ASSIGNMENT
+========================================================
+
+Assign:
+
+test661
+
+as the CC for the required ECE test flow.
+
+Use the actual CC assignment functionality.
+
+Do NOT directly manipulate the database unless the existing application requires controlled setup.
+
+Verify:
+
+- test661 is assigned as CC
+- correct department
+- correct scope
+- correct role
+- assignment audit log
+- CC can see expected student/activity/badge data
+- CC cannot access unauthorized data
+
+========================================================
+22. CC ACCEPTANCE / ADMIN APPROVAL
+========================================================
+
+Use test661 as CC.
+
+The CC must actually accept the relevant badge/request through the existing application workflow.
+
+If the existing workflow requires:
+
+CC
+→ Accept
+
+and then:
+
+Admin / Super Admin
+→ Approve
+
+execute the complete workflow.
+
+Verify all state transitions.
+
+Record:
+- request date
+- student
+- badge
+- CC
+- acceptance date
+- admin/super-admin action
+- final badge status
+- audit records
+
+========================================================
+23. AUDIT LOG VALIDATION
+========================================================
+
+This is VERY IMPORTANT.
+
+For the entire one-month simulation, verify that the central audit log records important actions.
+
+Check:
+
+CREATE
+UPDATE/MODIFY
+DELETE/soft delete where applicable
+ACTIVITY AWARD
+PENALTY
+ATTENDANCE
+TEAM CREATION
+CAPTAIN ASSIGNMENT
+VICE CAPTAIN ASSIGNMENT
+STAGE PROGRESSION
+XP TRANSACTION
+BADGE REQUEST
+CC ASSIGNMENT
+CC ACCEPTANCE
+ADMIN APPROVAL
+SMS/notification action where supported
+
+For each audit record capture:
+
+- timestamp
+- actor
+- actor role
+- action
+- entity
+- entity ID if applicable
+- description
+- relevant details
+
+Make sure audit failures do NOT silently corrupt/rollback the main business transaction unless the existing system intentionally requires transactional audit behavior.
+
+========================================================
+24. SECURITY VALIDATION
+========================================================
+
+During the test verify role-based access.
+
+Test at minimum:
+
+STUDENT
+CC
+TEACHER
+HOD
+ADMIN
+SUPER ADMIN
+
+Verify that:
+- Student cannot access generic all-student endpoint if restricted.
+- CC only sees permitted scope.
+- Staff only perform permitted activity operations.
+- Badge approval requires correct role.
+- Team/captain operations respect authorization.
+- No IDOR exists in student/activity/badge endpoints.
+- JWT authentication is respected.
+- Existing security rules are not bypassed.
+
+Do not weaken security just to make the test pass.
+
+========================================================
+25. DATABASE VALIDATION
+========================================================
+
+After the test, inspect the database.
+
+Verify:
+
+Students:
+60
+
+Teams:
+6
+
+Team members:
+60
+
+Captains:
+6
+
+Vice Captains:
+6
+
+Staff test users:
+10
+
+Activities:
+expected count according to Stage 1 + Stage 2 + Stage 3
+
+Attendance:
+expected daily records
+
+XP transactions:
+consistent with activities/attendance
+
+Penalties:
+expected count
+
+Badge requests:
+expected count
+
+CC assignment:
+test661
+
+Audit logs:
+expected events
+
+Guardian phone:
+exactly 5 selected test students use:
+
+6380170548
+
+Check for:
+- duplicate records
+- orphan records
+- invalid foreign keys
+- duplicate XP
+- duplicate attendance processing
+- duplicate weekly awards
+- duplicate daily penalties
+- duplicate teams
+- students belonging to multiple teams
+- missing audit records
+- incorrect stage values
+
+========================================================
+26. DO NOT FORCE SUCCESS
+========================================================
+
+This is a TEST.
+
+If something fails:
+
+DO NOT:
+- manually update the final value to make it pass
+- directly update stage to Stage 3
+- directly update XP
+- directly update streak
+- manually approve badge
+- manually create fake audit records
+
+Instead:
+
+1. Capture the failure.
+2. Identify the responsible service/controller/engine.
+3. Determine expected behavior from existing business rules.
+4. Report the issue.
+5. If a safe code fix is clearly required, propose it separately.
+6. Do not silently modify business logic during the test.
+
+========================================================
+27. COMPLETE STUDENT-BY-STUDENT TRACE
+========================================================
+
+For all 60 students generate a complete trace.
+
+For every student:
+
+Student ID
+Name
+Department
+Year
+Section
+
+Stage 1:
+- activities
+- award XP
+- penalty XP
+- individual XP
+- group XP
+- M
+- I
+- G
+- thresholds
+- Stage 1 result
+
+Team:
+- team ID/name
+- captain
+- vice captain
+- members
+
+Stage 2:
+- activities
+- XP
+- M
+- I
+- G
+- thresholds
+- Stage 2 result
+
+Stage 3:
+- activities
+- XP
+- M
+- I
+- G
+- Stage 3 result
+
+Attendance:
+- total working days
+- present days
+- absent days
+- streak
+- daily engine result
+- weekly engine result
+- attendance XP
+
+Penalty:
+- penalty activity
+- date
+- reason
+- amount
+- staff
+
+Badges:
+- badge requested
+- CC
+- acceptance
+- admin/super admin approval
+- final status
+
+Final:
+- total XP
+- total penalties
+- final stage
+- final streak
+- team
+- badge status
+
+========================================================
+28. ACTIVITY → XP TRACE
+========================================================
+
+Create a separate report showing every XP transaction.
+
+Columns:
+
+Date
+Student
+Activity
+Stage
+Activity Type
+Award/Penalty
+Individual/Group
+Staff
+XP
+Previous XP
+New XP
+Source
+Transaction/History ID
+
+The report must allow me to answer:
+
+"How did this student get this XP?"
+
+for every student.
+
+========================================================
+29. ATTENDANCE TRACE
+========================================================
+
+Create a complete attendance report.
+
+Columns:
+
+Date
+Student
+Department
+Team
+Attendance status
+Period/session
+Marked by
+Marked timestamp
+Daily engine processed?
+Streak before
+Streak after
+Attendance XP
+Penalty
+Guardian SMS triggered?
+SMS status
+
+The report must allow me to answer:
+
+"Who marked attendance, for which period, on which date?"
+
+========================================================
+30. ENGINE EXECUTION REPORT
+========================================================
+
+Create a report for:
+
+Daily Attendance Engine
+Weekly Attendance Engine
+Captain/Vice Captain Engine
+Stage progression engine if applicable
+Activity/XP engine if applicable
+Badge engine if applicable
+
+For each:
+
+Engine
+Execution date
+Execution time
+Manual/Automatic
+Input records
+Processed students
+Successful
+Skipped
+Failed
+XP awarded
+Penalties
+Errors
+Duplicate protection result
+
+========================================================
+31. ISSUE DETECTION
+========================================================
+
+At the end, classify every tested feature as:
+
+PASS
+PARTIAL
+FAIL
+NOT TESTABLE
+
+Do NOT mark PASS just because the API returned 200.
+
+Validate actual database state and business outcome.
+
+For every failure provide:
+
+Issue ID
+Feature
+Expected behavior
+Actual behavior
+Student/Test data affected
+API/service/engine involved
+Database evidence
+Error/log evidence
+Severity
+Root cause
+Suggested fix
+Whether it blocks production
+
+========================================================
+32. FINAL TEST SCORECARD
+========================================================
+
+Generate a final scorecard:
+
+Student Creation                 PASS/FAIL
+Staff Creation                  PASS/FAIL
+Activity Creation               PASS/FAIL
+Stage 1 Award Activities        PASS/FAIL
+Stage 1 Penalty Activity        PASS/FAIL
+Individual Activities           PASS/FAIL
+Group Activities                PASS/FAIL
+M Threshold                     PASS/FAIL
+I Threshold                     PASS/FAIL
+G Threshold                     PASS/FAIL
+Stage 1 → Stage 2               PASS/FAIL
+Team Formation                   PASS/FAIL
+10 Members/Team                 PASS/FAIL
+Captain Assignment              PASS/FAIL
+Vice Captain Assignment         PASS/FAIL
+Stage 2 Activities              PASS/FAIL
+Stage 2 → Stage 3               PASS/FAIL
+Stage 3 Activities              PASS/FAIL
+XP Calculation                  PASS/FAIL
+Penalty Calculation             PASS/FAIL
+Daily Attendance                PASS/FAIL
+Weekly Attendance               PASS/FAIL
+Streak Calculation              PASS/FAIL
+Attendance XP                   PASS/FAIL
+Guardian SMS                    PASS/FAIL
+Captain/Vice Captain Engine     PASS/FAIL
+Badge Request                   PASS/FAIL
+CC Assignment                  PASS/FAIL
+CC Acceptance                  PASS/FAIL
+Admin/Super Admin Approval     PASS/FAIL
+Audit Logging                  PASS/FAIL
+Security/Authorization        PASS/FAIL
+Database Integrity             PASS/FAIL
+Duplicate Protection           PASS/FAIL
+
+========================================================
+33. FINAL DOCUMENT
+========================================================
+
+Create a COMPLETE FINAL TEST DOCUMENT.
+
+Preferred filename:
+
+PragatiX_1_Month_End_to_End_Mock_Test_Report.pdf
+
+If PDF generation is not available, create:
+
+PragatiX_1_Month_End_to_End_Mock_Test_Report.md
+
+The document must contain:
+
+1. Executive Summary
+2. Test Objective
+3. Test Environment
+4. Test Period
+5. Test Dataset
+6. 60 Student List
+7. 10 Staff List
+8. Activity Configuration
+9. Stage 1 Results
+10. Team Formation Results
+11. Stage 2 Results
+12. Stage 3 Results
+13. M/I/G Threshold Results
+14. XP Calculation Results
+15. Penalty Results
+16. Attendance Results
+17. Streak Results
+18. Daily Engine Results
+19. Weekly Engine Results
+20. Captain/Vice Captain Engine Results
+21. Guardian SMS Results
+22. Badge Request Results
+23. CC Assignment Results
+24. CC Acceptance Results
+25. Audit Log Results
+26. Security Test Results
+27. Database Integrity Results
+28. Student-by-Student Summary
+29. XP Transaction Summary
+30. Attendance Trace
+31. Engine Execution Timeline
+32. Issues Found
+33. Root Causes
+34. PASS/PARTIAL/FAIL Scorecard
+35. Recommendations
+36. Final Conclusion
+
+========================================================
+34. FINAL DATA SUMMARY
+========================================================
+
+At the end provide exact counts:
+
+Total test students:
+60
+
+Total teams:
+6
+
+Students per team:
+10
+
+Captains:
+6
+
+Vice Captains:
+6
+
+Test staff:
+10
+
+Stage 1 activities:
+exact count
+
+Stage 2 activities:
+exact count
+
+Stage 3 activities:
+exact count
+
+Total activity awards:
+exact count
+
+Total penalties:
+exact count
+
+Total attendance records:
+exact count
+
+Total daily engine executions:
+exact count
+
+Total weekly engine executions:
+exact count
+
+Total attendance XP:
+exact amount
+
+Total activity XP:
+exact amount
+
+Total penalty XP:
+exact amount
+
+Total final XP:
+exact amount
+
+Total badge requests:
+exact count
+
+Total CC acceptances:
+exact count
+
+Total admin/super-admin approvals:
+exact count
+
+Total guardian SMS triggers:
+exact count
+
+Total audit records:
+exact count
+
+Total PASS:
+exact count
+
+Total PARTIAL:
+exact count
+
+Total FAIL:
+exact count
+
+========================================================
+35. MOST IMPORTANT FINAL REQUIREMENT
+========================================================
+
+Do not stop after creating test data.
+
+I need a COMPLETE END-TO-END EXECUTION.
+
+The expected lifecycle is:
+
+60 ECE Students
+        ↓
+Stage 1 Activities
+        ↓
+3 Award + 1 Penalty
+        ↓
+6 Individual Award Activities
+        ↓
+3 Group Activities
+        ↓
+M / I / G thresholds
+        ↓
+Stage 1 → Stage 2
+        ↓
+6 Teams
+        ↓
+10 Members each
+        ↓
+1 Captain + 1 Vice Captain each
+        ↓
+Stage 2 Activities
+        ↓
+M / I / G thresholds
+        ↓
+Stage 3
+        ↓
+Stage 3 Activities
+        ↓
+XP Transactions
+        ↓
+Penalty Transactions
+        ↓
+Full Month Attendance
+        ↓
+Daily Streak
+        ↓
+Weekly Attendance Engine
+        ↓
+Captain/Vice Captain Engine
+        ↓
+Guardian SMS for controlled absences
+        ↓
+Badge Request
+        ↓
+CC = test661
+        ↓
+CC Acceptance
+        ↓
+Admin/Super Admin approval
+        ↓
+Audit Logs
+        ↓
+Database Validation
+        ↓
+Final Complete Test Report
+
+Every stage must be verified from the actual application/database state.
+
+DO NOT claim completion until the complete one-month simulation and validation are finished.
+
+At the end, show me:
+- what worked
+- what partially worked
+- what failed
+- exact student/activity/attendance/XP evidence
+- exact root causes
+- exact database evidence
+- exact engine execution evidence
+- final PASS/PARTIAL/FAIL score
+- generated final report path

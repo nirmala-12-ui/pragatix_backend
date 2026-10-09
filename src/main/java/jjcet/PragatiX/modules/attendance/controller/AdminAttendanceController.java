@@ -1,0 +1,50 @@
+package jjcet.PragatiX.modules.attendance.controller;
+
+import jjcet.PragatiX.common.response.ApiResponse;
+import jjcet.PragatiX.modules.attendance.dto.response.AdminAttendanceSummaryResponse;
+import jjcet.PragatiX.modules.attendance.service.AdminAttendanceService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+
+import jjcet.PragatiX.modules.attendance.dto.response.AdminAttendanceHistoryItemResponse;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/admin/attendance")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN', 'SUPER_ADMIN', 'HOD', 'TEACHER', 'CLASS_COORDINATOR', 'CC')")
+public class AdminAttendanceController {
+
+    @Autowired
+    private AdminAttendanceService attendanceService;
+
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<AdminAttendanceSummaryResponse>> getSummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Integer period,
+            @RequestParam(required = false) Long yearId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long sectionId) {
+
+        AdminAttendanceSummaryResponse summary = attendanceService.getDashboardSummary(date, yearId,
+                departmentId, sectionId, period);
+        return ResponseEntity.ok(ApiResponse.ok(summary));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<ApiResponse<List<AdminAttendanceHistoryItemResponse>>> getHistory(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Integer period,
+            @RequestParam(required = false) Long yearId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long sectionId) {
+
+        List<AdminAttendanceHistoryItemResponse> history = attendanceService.getAttendanceHistory(date, yearId,
+                departmentId, sectionId, period);
+        return ResponseEntity.ok(ApiResponse.ok(history));
+    }
+}

@@ -1,0 +1,290 @@
+package jjcet.PragatiX.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+
+/**
+ * Represents a student team created by a Class Coordinator (CC) or for a Group
+ * Activity
+ */
+@Entity
+@Table(name = "teams", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_team_name_class", columnNames = { "name", "department_id", "year", "section_id" })
+})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
+
+@Filter(name = "deletedFilter")
+public class Team implements SoftDeletable {
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "permanent_delete_at")
+    private LocalDateTime permanentDeleteAt;
+
+    @Column(name = "deleted_by")
+    private String deletedBy;
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 255)
+    private String name;
+
+    @Column(nullable = false)
+    private int size;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "captain_id")
+    private Student captain;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "vice_captain_id")
+    private Student viceCaptain;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @Column(name = "year")
+    private String year;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "section_id")
+    private Section section;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
+
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({ "team", "teams" })
+    private Set<Student> members = new HashSet<>();
+
+    public Team() {
+    }
+
+    public Team(Long id, String name, int size, Student captain) {
+        this.id = id;
+        this.name = name;
+        this.size = size;
+        this.captain = captain;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public Student getCaptain() {
+        return captain;
+    }
+
+    public void setCaptain(Student captain) {
+        this.captain = captain;
+    }
+
+    public Student getViceCaptain() {
+        return viceCaptain;
+    }
+
+    public void setViceCaptain(Student viceCaptain) {
+        this.viceCaptain = viceCaptain;
+    }
+
+    public Set<Student> getMembers() {
+        return members;
+    }
+
+    public void setMembers(Set<Student> members) {
+        this.members = members;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public String getYear() {
+        return year;
+    }
+
+    public void setYear(String year) {
+        this.year = year;
+    }
+
+    public Section getSection() {
+        return section;
+    }
+
+    public void setSection(Section section) {
+        this.section = section;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    
+    @Override
+    public boolean isDeleted() { return deleted; }
+    @Override
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+
+    @Override
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    @Override
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    @Override
+    public LocalDateTime getPermanentDeleteAt() { return permanentDeleteAt; }
+    @Override
+    public void setPermanentDeleteAt(LocalDateTime permanentDeleteAt) { this.permanentDeleteAt = permanentDeleteAt; }
+
+    @Override
+    public String getDeletedBy() { return deletedBy; }
+    @Override
+    public void setDeletedBy(String deletedBy) { this.deletedBy = deletedBy; }
+
+public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final Team team = new Team();
+
+        public Builder name(String v) {
+            team.name = v;
+            return this;
+        }
+
+        public Builder size(int v) {
+            team.size = v;
+            return this;
+        }
+
+        public Builder captain(Student v) {
+            team.captain = v;
+            return this;
+        }
+
+        public Builder viceCaptain(Student v) {
+            team.viceCaptain = v;
+            return this;
+        }
+
+        public Builder department(Department v) {
+            team.department = v;
+            return this;
+        }
+
+        public Builder year(String v) {
+            team.year = v;
+            return this;
+        }
+
+        public Builder section(Section v) {
+            team.section = v;
+            return this;
+        }
+
+        public Builder createdBy(User v) {
+            team.createdBy = v;
+            return this;
+        }
+
+        public Builder members(Set<Student> v) {
+            team.members = v;
+            return this;
+        }
+
+        
+        public Builder deleted(boolean v) {
+            team.deleted = v;
+            return this;
+        }
+        public Builder deletedAt(LocalDateTime v) {
+            team.deletedAt = v;
+            return this;
+        }
+        public Builder permanentDeleteAt(LocalDateTime v) {
+            team.permanentDeleteAt = v;
+            return this;
+        }
+        public Builder deletedBy(String v) {
+            team.deletedBy = v;
+            return this;
+        }
+public Team build() {
+            return team;
+        }
+    }
+
+    public static String resolveCanonicalYearOfStudy(String rawYear) {
+        if (rawYear == null || rawYear.trim().isEmpty()) return null;
+        
+        String upperYear = rawYear.trim().toUpperCase();
+        if (upperYear.equals("1") || upperYear.equals("1ST") || upperYear.equals("1ST YEAR") || upperYear.equals("FIRST_YEAR") || upperYear.equals("FIRST YEAR")) {
+            return "FIRST_YEAR";
+        }
+        if (upperYear.equals("2") || upperYear.equals("2ND") || upperYear.equals("2ND YEAR") || upperYear.equals("SECOND_YEAR") || upperYear.equals("SECOND YEAR")) {
+            return "SECOND_YEAR";
+        }
+        if (upperYear.equals("3") || upperYear.equals("3RD") || upperYear.equals("3RD YEAR") || upperYear.equals("THIRD_YEAR") || upperYear.equals("THIRD YEAR")) {
+            return "THIRD_YEAR";
+        }
+        if (upperYear.equals("4") || upperYear.equals("4TH") || upperYear.equals("4TH YEAR") || upperYear.equals("FOURTH_YEAR") || upperYear.equals("FOURTH YEAR")) {
+            return "FOURTH_YEAR";
+        }
+        
+        return rawYear;
+    }
+
+    public static String reverseCanonicalYearOfStudy(String canonicalYear) {
+        if (canonicalYear == null || canonicalYear.trim().isEmpty()) return null;
+        
+        switch (canonicalYear.trim().toUpperCase()) {
+            case "FIRST_YEAR": return "1";
+            case "SECOND_YEAR": return "2";
+            case "THIRD_YEAR": return "3";
+            case "FOURTH_YEAR": return "4";
+            default: return canonicalYear;
+        }
+    }
+}

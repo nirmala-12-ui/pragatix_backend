@@ -1,0 +1,134 @@
+package jjcet.PragatiX.modules.student.service;
+
+import jjcet.PragatiX.entity.Activity;
+import jjcet.PragatiX.entity.ActivityAssignment;
+import jjcet.PragatiX.entity.Student;
+import jjcet.PragatiX.modules.activity.dto.response.ActivityResponse;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+public class StudentActivityAssembler {
+
+    private final StudentAssignmentResolver assignmentResolver;
+
+    public StudentActivityAssembler(StudentAssignmentResolver assignmentResolver) {
+        this.assignmentResolver = assignmentResolver;
+    }
+
+    public List<ActivityResponse> enrichActivities(
+            Student student,
+            List<Activity> activities,
+            Map<Long, List<ActivityAssignment>> assignmentsByActivity,
+            StudentXpAggregator.AggregatedXp aggregatedXp,
+            Long stageId) {
+
+        List<ActivityResponse> enrichedActivities = new ArrayList<>();
+
+        for (Activity act : activities) {
+            if (Boolean.TRUE.equals(act.getAttendanceEngineEnabled())) {
+                continue;
+            }
+            ActivityResponse actMap = new ActivityResponse();
+            actMap.setActivityId(act.getId());
+
+            String currentActivityName = act.getActivityName() != null ? act.getActivityName() : act.getName();
+            String normalizedActName = currentActivityName != null
+                    ? currentActivityName.trim().toLowerCase().replaceAll("\\s+", " ")
+                            .replaceAll("^\\p{Punct}+|\\p{Punct}+$", "")
+                    : null;
+
+            actMap.setActivityName(currentActivityName);
+            actMap.setDescription(
+                    act.getActivityDescription() != null ? act.getActivityDescription() : act.getDescription());
+            int rewardXp;
+            if ("Penalty".equalsIgnoreCase(act.getXpType())) {
+                rewardXp = (act.getPenaltyXp() != null && act.getPenaltyXp() > 0) ? act.getPenaltyXp()
+                        : act.getMaxPoints();
+            } else {
+                rewardXp = (act.getAwardXp() != null && act.getAwardXp() > 0) ? act.getAwardXp() : act.getMaxPoints();
+            }
+            actMap.setRewardXp(rewardXp);
+            actMap.setPenaltyXp(act.getPenaltyXp());
+
+            int sumXp = 0;
+            if (aggregatedXp.xpByActivityId.containsKey(act.getId())) {
+                sumXp = aggregatedXp.xpByActivityId.get(act.getId());
+            } else if (normalizedActName != null && aggregatedXp.xpByActivityName.containsKey(normalizedActName)) {
+                sumXp = aggregatedXp.xpByActivityName.get(normalizedActName);
+            }
+
+            Integer cap = act.getCap();
+            int awardedXp = sumXp;
+            int requiredXp = rewardXp;
+
+            if (cap != null && cap > 1) {
+                requiredXp = rewardXp * cap;
+            }
+
+            if (!act.isVariableXp() && awardedXp > requiredXp) {
+                awardedXp = requiredXp;
+            }
+
+            actMap.setAwardedXp(awardedXp);
+            actMap.setRequiredXp(requiredXp);
+            actMap.setRemainingXp(Math.max(0, requiredXp - awardedXp));
+
+            actMap.setFrequency(act.getFrequency() != null ? act.getFrequency() : act.getAwardFrequency());
+            actMap.setEvidence(act.getEvidence());
+            actMap.setAwardType(act.getAwardType());
+            actMap.setIsVariableXp(act.isVariableXp());
+
+            String facultyName = null;
+            Long facultyId = null;
+
+            List<ActivityAssignment> assignments = assignmentsByActivity.getOrDefault(act.getId(),
+                    java.util.Collections.emptyList());
+
+            if (stageId != null) {
+                assignments = assignments.stream()
+                        .filter(a -> a.getStage() == null || a.getStage().getId().equals(stageId))
+                        .collect(Collectors.toList());
+            }
+
+            ActivityAssignment bestAssignment = assignmentResolver.resolveBestAssignment(student, assignments);
+
+            if (bestAssignment != null && bestAssignment.getTeacher() != null) {
+                facultyName = bestAssignment.getTeacher().getFullName();
+                facultyId = bestAssignment.getTeacher().getId();
+            }
+
+            if (facultyName == null && act.getSubgroup() != null && act.getSubgroup().getAssignedFaculty() != null) {
+                facultyName = act.getSubgroup().getAssignedFaculty().getFullName();
+                facultyId = act.getSubgroup().getAssignedFaculty().getId();
+            }
+
+            // Only show activities where staff is assigned for this student's class
+            if (facultyId == null && facultyName == null) {
+                continue;
+            }
+
+            actMap.setFacultyName(facultyName);
+            actMap.setFacultyId(facultyId);
+
+            boolean completed = awardedXp >= requiredXp;
+            String status = completed ? "COMPLETED" : (awardedXp > 0 ? "IN_PROGRESS" : "NOT_STARTED");
+
+            actMap.setCompleted(completed);
+            actMap.setStatus(status);
+            actMap.setAllowStudentRequest(act.getAllowStudentRequest());
+            actMap.setAttendanceEngineEnabled(act.getAttendanceEngineEnabled());
+            actMap.setAttendanceRule(act.getAttendanceRule());
+            actMap.setManualEvidenceName(act.getManualEvidenceName());
+            actMap.setXpType(act.getXpType());
+
+            enrichedActivities.add(actMap);
+        }
+
+        return enrichedActivities;
+    }
+}
