@@ -79,18 +79,7 @@ public class NeopatSmsOrchestrationService {
 
         for (CurrentAssessment assessment : pendingList) {
             try {
-                // 1. Verify student exists in PragatiX DB-1 (Read-only query)
-                Optional<Student> studentOpt = studentRepository.findByEmail(assessment.getEmail());
-                if (studentOpt.isEmpty()) {
-                    log.warn("Student not found in PragatiX DB for email: {}", assessment.getEmail());
-                    recordFailedAssessment(assessment, "STUDENT_NOT_FOUND",
-                            "Student not found in PragatiX database for email: " + assessment.getEmail());
-                    failureCount++;
-                    continue;
-                }
-                Student student = studentOpt.get();
-
-                // 2. Lookup parent contact in DB-2 (neopa_sms)
+                // 1. Lookup parent contact in DB-2 (neopa_sms) - PragatiX DB decoupled
                 Optional<ParentContact> parentContactOpt =
                         parentContactRepository.findByStudentEmailAndIsActiveTrue(assessment.getEmail());
                 if (parentContactOpt.isEmpty()) {
@@ -102,8 +91,22 @@ public class NeopatSmsOrchestrationService {
                 }
                 ParentContact parentContact = parentContactOpt.get();
 
+                // 2. Resolve student display name (fallback gracefully if not in PragatiX DB)
+                String studentName = "Student";
+                try {
+                    Optional<Student> studentOpt = studentRepository.findByEmail(assessment.getEmail());
+                    if (studentOpt.isPresent() && StringUtils.hasText(studentOpt.get().getFullName())) {
+                        studentName = studentOpt.get().getFullName();
+                    } else if (assessment.getEmail() != null && assessment.getEmail().contains("@")) {
+                        studentName = assessment.getEmail().substring(0, assessment.getEmail().indexOf("@"));
+                    }
+                } catch (Exception ex) {
+                    if (assessment.getEmail() != null && assessment.getEmail().contains("@")) {
+                        studentName = assessment.getEmail().substring(0, assessment.getEmail().indexOf("@"));
+                    }
+                }
+
                 // 3. Build SMS message content
-                String studentName = StringUtils.hasText(student.getFullName()) ? student.getFullName() : "Student";
                 String testId = assessment.getTestId();
                 String scoreStr = assessment.getMarks() + "/" + assessment.getTotalMarks();
                 String analysisUrl = StringUtils.hasText(assessment.getResultAnalysisUrl()) ? assessment.getResultAnalysisUrl() : "N/A";

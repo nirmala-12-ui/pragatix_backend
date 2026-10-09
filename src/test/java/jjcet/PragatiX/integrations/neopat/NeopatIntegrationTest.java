@@ -243,8 +243,8 @@ public class NeopatIntegrationTest {
     }
 
     @Test
-    @DisplayName("Cross-DB Validation: Records failure if student is not found in PragatiX DB")
-    void testStudentNotFoundMovesToFailedAssessment() {
+    @DisplayName("Cross-DB Decoupled: SMS dispatches successfully using parent contact even if student is not in PragatiX DB")
+    void testStudentNotInPragatiXStillDispatchesIfParentContactExists() {
         CurrentAssessment assessment = new CurrentAssessment();
         assessment.setId(101L);
         assessment.setEmail("unknown@jjcet.ac.in");
@@ -253,19 +253,21 @@ public class NeopatIntegrationTest {
         assessment.setTotalMarks(new BigDecimal("100.00"));
         assessment.setRawPayload("{\"email\":\"unknown@jjcet.ac.in\"}");
 
+        ParentContact parentContact = new ParentContact("unknown@jjcet.ac.in", "+919876543210");
+
         when(currentAssessmentRepository.findByProcessingStatus("PENDING"))
                 .thenReturn(List.of(assessment));
+        when(parentContactRepository.findByStudentEmailAndIsActiveTrue("unknown@jjcet.ac.in"))
+                .thenReturn(Optional.of(parentContact));
         when(studentRepository.findByEmail("unknown@jjcet.ac.in")).thenReturn(Optional.empty());
+        when(twilioSmsService.sendSms(eq("+919876543210"), anyString()))
+                .thenReturn(new NeopatTwilioSmsService.TwilioSendResult(true, "SM123", null));
 
         NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch();
 
-        assertEquals(0, result.successCount);
-        assertEquals(1, result.failureCount);
-
-        ArgumentCaptor<FailedAssessment> failCaptor = ArgumentCaptor.forClass(FailedAssessment.class);
-        verify(failedAssessmentRepository).save(failCaptor.capture());
-        assertEquals("STUDENT_NOT_FOUND", failCaptor.getValue().getFailureType());
-        assertEquals(assessment.getRawPayload(), failCaptor.getValue().getRawPayload());
+        assertEquals(1, result.successCount);
+        assertEquals(0, result.failureCount);
+        verify(assessmentHistoryRepository).save(any(AssessmentHistory.class));
         verify(currentAssessmentRepository).delete(assessment);
     }
 
@@ -280,13 +282,8 @@ public class NeopatIntegrationTest {
         assessment.setTotalMarks(new BigDecimal("100.00"));
         assessment.setRawPayload("{\"email\":\"student@jjcet.ac.in\"}");
 
-        Student student = new Student();
-        student.setEmail("student@jjcet.ac.in");
-        student.setFullName("John Doe");
-
         when(currentAssessmentRepository.findByProcessingStatus("PENDING"))
                 .thenReturn(List.of(assessment));
-        when(studentRepository.findByEmail("student@jjcet.ac.in")).thenReturn(Optional.of(student));
         when(parentContactRepository.findByStudentEmailAndIsActiveTrue("student@jjcet.ac.in"))
                 .thenReturn(Optional.empty());
 
