@@ -2,41 +2,88 @@ package jjcet.PragatiX.integrations.neopat.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jjcet.PragatiX.integrations.neopat.dto.NeopatAssessmentPayloadDto;
-import jjcet.PragatiX.integrations.neopat.entity.CurrentAssessment;
+import jjcet.PragatiX.integrations.neopat.entity.BaseBatchAssessment;
 import jjcet.PragatiX.integrations.neopat.entity.FailedAssessment;
-import jjcet.PragatiX.integrations.neopat.repository.CurrentAssessmentRepository;
 import jjcet.PragatiX.integrations.neopat.repository.FailedAssessmentRepository;
+import jjcet.PragatiX.integrations.neopat.util.NeopatBatchAssessmentFilter;
 import jjcet.PragatiX.integrations.neopat.util.NeopatDateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 public class NeopatAssessmentProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(NeopatAssessmentProcessingService.class);
 
-    private final CurrentAssessmentRepository currentAssessmentRepository;
+    private final BatchAssessmentRepositoryProvider repositoryProvider;
     private final FailedAssessmentRepository failedAssessmentRepository;
     private final NeopatAuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
-    public NeopatAssessmentProcessingService(CurrentAssessmentRepository currentAssessmentRepository,
+    public record InboundAssessmentResult(boolean accepted, boolean skipped, String reason, Integer batchYear, BaseBatchAssessment assessment) {
+        public static InboundAssessmentResult accept(Integer batchYear, BaseBatchAssessment assessment) {
+            return new InboundAssessmentResult(true, false, "ACCEPTED", batchYear, assessment);
+        }
+
+        public static InboundAssessmentResult skip(String reason) {
+            return new InboundAssessmentResult(false, true, reason, null, null);
+        }
+    }
+
+    public NeopatAssessmentProcessingService(BatchAssessmentRepositoryProvider repositoryProvider,
                                              FailedAssessmentRepository failedAssessmentRepository,
                                              NeopatAuditLogService auditLogService,
                                              ObjectMapper objectMapper) {
-        this.currentAssessmentRepository = currentAssessmentRepository;
+        this.repositoryProvider = repositoryProvider;
         this.failedAssessmentRepository = failedAssessmentRepository;
         this.auditLogService = auditLogService;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Primary processing entry point for incoming Neopat assessment webhook.
+     * Evaluates test name, extracts batch year, filters out non-weekly/daily/unsupported assessments,
+     * and stores valid assessments into the batch-specific table (assessment_2027..2030)
+     * while avoiding duplicate entries.
+     */
     @Transactional("neopatTransactionManager")
-    public CurrentAssessment receiveAndStoreAssessment(NeopatAssessmentPayloadDto payload, String rawPayload) {
-        CurrentAssessment entity = new CurrentAssessment();
-        entity.setEmail(payload.getEmail().trim().toLowerCase());
-        entity.setTestId(payload.getTestId().trim());
+    public InboundAssessmentResult processInboundAssessment(NeopatAssessmentPayloadDto payload, String rawPayload) {
+        String testIdentifier = payload.getEffectiveTestName();
+        String email = payload.getEmail() != null ? payload.getEmail().trim().toLowerCase() : "";
+
+        // 1. Evaluate batch year and weekly criteria
+        NeopatBatchAssessmentFilter.FilterResult filterResult = NeopatBatchAssessmentFilter.evaluate(testIdentifier);
+        if (!filterResult.accepted()) {
+            log.info("Skipping assessment submission for student '{}', test '{}': {}", email, testIdentifier, filterResult.reason());
+            auditLogService.logEvent(
+                    "INBOUND_ASSESSMENT",
+                    testIdentifier,
+                    "ASSESSMENT_SKIPPED",
+                    "SKIPPED",
+                    "Skipped Neopat assessment [" + testIdentifier + "] for " + email + ": " + filterResult.reason(),
+                    null
+            );
+            return InboundAssessmentResult.skip(filterResult.reason());
+        }
+
+        Integer batchYear = filterResult.batchYear();
+        String testId = payload.getTestId() != null ? payload.getTestId().trim() : testIdentifier;
+
+        // 2. Prevent duplicate entries using batch-specific table lookup
+        Optional<? extends BaseBatchAssessment> existingOpt =
+                repositoryProvider.findByBatchAndEmailAndTestId(batchYear, email, testId);
+
+        BaseBatchAssessment entity = existingOpt.isPresent()
+                ? existingOpt.get()
+                : repositoryProvider.createNewEntity(batchYear);
+
+        entity.setEmail(email);
+        entity.setTestId(testId);
+        entity.setTestName(testIdentifier);
         entity.setMarks(payload.getMarks());
         entity.setTotalMarks(payload.getTotalMarks());
         entity.setAttempts(payload.getAttempts() != null ? payload.getAttempts() : 1);
@@ -45,7 +92,10 @@ public class NeopatAssessmentProcessingService {
         entity.setSubmitTime(payload.getSubmitTime());
         entity.setProcessingStatus("PENDING");
         entity.setReceivedAt(NeopatDateTimeUtil.nowIst());
-        entity.setCreatedAt(NeopatDateTimeUtil.nowIst());
+
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(NeopatDateTimeUtil.nowIst());
+        }
 
         if (payload.getSectionWiseMarks() != null) {
             try {
@@ -55,31 +105,28 @@ public class NeopatAssessmentProcessingService {
             }
         }
 
-        if (rawPayload != null && !rawPayload.trim().isEmpty()) {
-            entity.setRawPayload(rawPayload);
-        } else {
-            try {
-                entity.setRawPayload(objectMapper.writeValueAsString(payload));
-            } catch (Exception ignored) {
-            }
-        }
-
-        CurrentAssessment saved = currentAssessmentRepository.save(entity);
+        BaseBatchAssessment saved = repositoryProvider.save(entity);
 
         auditLogService.logEvent(
-                "CURRENT_ASSESSMENT",
+                "ASSESSMENT_" + batchYear,
                 String.valueOf(saved.getId()),
                 "NEOPAT_ASSESSMENT_RECEIVED",
                 "SUCCESS",
-                "Received Neopat assessment for email: " + saved.getEmail() + ", test: " + saved.getTestId(),
+                "Stored in assessment_" + batchYear + " for email: " + saved.getEmail() + ", test: " + testIdentifier,
                 null
         );
 
-        return saved;
+        return InboundAssessmentResult.accept(batchYear, saved);
     }
 
     @Transactional("neopatTransactionManager")
-    public CurrentAssessment receiveAndStoreAssessment(NeopatAssessmentPayloadDto payload) {
+    public BaseBatchAssessment receiveAndStoreAssessment(NeopatAssessmentPayloadDto payload, String rawPayload) {
+        InboundAssessmentResult result = processInboundAssessment(payload, rawPayload);
+        return result.assessment();
+    }
+
+    @Transactional("neopatTransactionManager")
+    public BaseBatchAssessment receiveAndStoreAssessment(NeopatAssessmentPayloadDto payload) {
         return receiveAndStoreAssessment(payload, null);
     }
 

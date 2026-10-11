@@ -10,4 +10,10 @@ import java.util.Optional;
 public interface NeopatSmsScheduleRepository extends JpaRepository<NeopatSmsSchedule, Long> {
 
     Optional<NeopatSmsSchedule> findFirstByOrderByIdAsc();
+
+    Optional<NeopatSmsSchedule> findByBatchYear(Integer batchYear);
+
+    boolean existsByBatchYear(Integer batchYear);
+
+    java.util.List<NeopatSmsSchedule> findAllByOrderByBatchYearAsc();
 }

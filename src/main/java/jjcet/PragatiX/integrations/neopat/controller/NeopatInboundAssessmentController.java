@@ -60,20 +60,26 @@ public class NeopatInboundAssessmentController {
             NeopatAssessmentPayloadDto payload = objectMapper.readValue(rawPayload, NeopatAssessmentPayloadDto.class);
 
             // 3. Validate required fields
+            String testIdentifier = payload.getEffectiveTestName();
             if (payload.getEmail() == null || payload.getEmail().isBlank()
-                    || payload.getTestId() == null || payload.getTestId().isBlank()
+                    || testIdentifier == null || testIdentifier.isBlank()
                     || payload.getMarks() == null || payload.getTotalMarks() == null) {
                 processingService.recordRawPayloadFailure(
                         rawPayload,
                         "VALIDATION_FAILED",
-                        "Missing mandatory fields (email, test_id, marks, or total_marks)",
+                        "Missing mandatory fields (email, test_id/test_name, marks, or total_marks)",
                         payload.getEmail()
                 );
                 return ResponseEntity.badRequest().body(Map.of("success", false));
             }
 
-            // 4. Durably persist to current_assessment with complete raw payload
-            processingService.receiveAndStoreAssessment(payload, rawPayload);
+            // 4. Batch filter, evaluate, and store if eligible
+            NeopatAssessmentProcessingService.InboundAssessmentResult result =
+                    processingService.processInboundAssessment(payload, rawPayload);
+
+            if (result.skipped()) {
+                log.info("Inbound assessment skipped for email '{}': {}", payload.getEmail(), result.reason());
+            }
 
             // 5. Return strictly {"success": true}
             return ResponseEntity.ok(Map.of("success", true));

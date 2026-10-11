@@ -16,4 +16,14 @@ public interface NeopatSmsExecutionRepository extends JpaRepository<NeopatSmsExe
     boolean existsByScheduledDateAndScheduledTime(LocalDate scheduledDate, LocalTime scheduledTime);
 
     boolean existsByScheduledDateAndStatusIn(LocalDate scheduledDate, java.util.Collection<String> statuses);
+
+    Optional<NeopatSmsExecution> findByBatchYearAndScheduledDateAndScheduledTime(Integer batchYear, LocalDate scheduledDate, LocalTime scheduledTime);
+
+    boolean existsByBatchYearAndScheduledDateAndScheduledTime(Integer batchYear, LocalDate scheduledDate, LocalTime scheduledTime);
+
+    boolean existsByBatchYearAndScheduledDateAndStatusIn(Integer batchYear, LocalDate scheduledDate, java.util.Collection<String> statuses);
+
+    Optional<NeopatSmsExecution> findTopByBatchYearOrderByStartedAtDesc(Integer batchYear);
+
+    Optional<NeopatSmsExecution> findTopByOrderByStartedAtDesc();
 }

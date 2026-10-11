@@ -22,8 +22,12 @@ public class NeopatAssessmentPayloadDto {
 
     @NotBlank(message = "Test ID is required")
     @JsonProperty("test_id")
-    @JsonAlias({"test_id", "testId", "assessmentname", "assessment_name", "assessment_id"})
+    @JsonAlias({"test_id", "testId", "assessment_id"})
     private String testId;
+
+    @JsonProperty("test_name")
+    @JsonAlias({"test_name", "testname", "assessmentname", "assessment_name"})
+    private String testName;
 
     @NotNull(message = "Marks obtained is required")
     @PositiveOrZero(message = "Marks must be non-negative")
@@ -70,6 +74,21 @@ public class NeopatAssessmentPayloadDto {
 
     public void setTestId(String testId) {
         this.testId = testId;
+    }
+
+    public String getTestName() {
+        return testName;
+    }
+
+    public void setTestName(String testName) {
+        this.testName = testName;
+    }
+
+    public String getEffectiveTestName() {
+        if (testName != null && !testName.trim().isEmpty()) {
+            return testName.trim();
+        }
+        return testId != null ? testId.trim() : "";
     }
 
     public BigDecimal getMarks() {

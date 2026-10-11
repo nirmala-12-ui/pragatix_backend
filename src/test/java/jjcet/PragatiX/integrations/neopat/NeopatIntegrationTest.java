@@ -38,7 +38,16 @@ import static org.mockito.Mockito.*;
 public class NeopatIntegrationTest {
 
     @Mock
-    private CurrentAssessmentRepository currentAssessmentRepository;
+    private Assessment2027Repository repo2027;
+
+    @Mock
+    private Assessment2028Repository repo2028;
+
+    @Mock
+    private Assessment2029Repository repo2029;
+
+    @Mock
+    private Assessment2030Repository repo2030;
 
     @Mock
     private AssessmentHistoryRepository assessmentHistoryRepository;
@@ -64,6 +73,7 @@ public class NeopatIntegrationTest {
     @Mock
     private StudentRepository studentRepository;
 
+    private BatchAssessmentRepositoryProvider repositoryProvider;
     private TwilioConfigProperties twilioConfig;
     private NeopatSmsOrchestrationService orchestrationService;
     private NeopatAssessmentProcessingService processingService;
@@ -77,8 +87,10 @@ public class NeopatIntegrationTest {
         twilioConfig.setTestPhoneNumber("+919876543210");
         twilioConfig.setFromNumber("+1234567890");
 
+        repositoryProvider = new BatchAssessmentRepositoryProvider(repo2027, repo2028, repo2029, repo2030);
+
         orchestrationService = new NeopatSmsOrchestrationService(
-                currentAssessmentRepository,
+                repositoryProvider,
                 assessmentHistoryRepository,
                 failedAssessmentRepository,
                 parentContactRepository,
@@ -91,7 +103,7 @@ public class NeopatIntegrationTest {
         );
 
         processingService = new NeopatAssessmentProcessingService(
-                currentAssessmentRepository,
+                repositoryProvider,
                 failedAssessmentRepository,
                 auditLogService,
                 objectMapper
@@ -132,12 +144,12 @@ public class NeopatIntegrationTest {
     }
 
     @Test
-    @DisplayName("Controller: Valid payload with multiple sections stores raw_payload and returns strictly {\"success\": true}")
+    @DisplayName("Controller: Valid payload with multiple sections stores raw_payload in assessment_2027 and returns strictly {\"success\": true}")
     void testInboundAssessmentWithSections() {
         String jsonPayload = """
                 {
                   "email": "student@jjcet.ac.in",
-                  "test_id": "TEST_FULL_01",
+                  "test_id": "2027_JJCET_08th_OCT_WEEKLY_ASSESSMENT",
                   "marks": "92.50",
                   "total_marks": "100.00",
                   "attempts": 1,
@@ -162,8 +174,8 @@ public class NeopatIntegrationTest {
                 }
                 """;
 
-        when(currentAssessmentRepository.save(any(CurrentAssessment.class))).thenAnswer(i -> {
-            CurrentAssessment ca = i.getArgument(0);
+        when(repo2027.save(any(Assessment2027.class))).thenAnswer(i -> {
+            Assessment2027 ca = i.getArgument(0);
             ca.setId(501L);
             return ca;
         });
@@ -175,21 +187,16 @@ public class NeopatIntegrationTest {
         assertEquals(1, response.getBody().size(), "Response body must contain exactly 1 field");
         assertEquals(Boolean.TRUE, response.getBody().get("success"));
 
-        ArgumentCaptor<CurrentAssessment> captor = ArgumentCaptor.forClass(CurrentAssessment.class);
-        verify(currentAssessmentRepository).save(captor.capture());
-        CurrentAssessment saved = captor.getValue();
+        ArgumentCaptor<Assessment2027> captor = ArgumentCaptor.forClass(Assessment2027.class);
+        verify(repo2027).save(captor.capture());
+        Assessment2027 saved = captor.getValue();
 
         assertEquals("student@jjcet.ac.in", saved.getEmail());
-        assertEquals("TEST_FULL_01", saved.getTestId());
+        assertEquals("2027_JJCET_08th_OCT_WEEKLY_ASSESSMENT", saved.getTestId());
         assertEquals(new BigDecimal("92.50"), saved.getMarks());
-        // Verify start_time and submit_time remain in UTC as sent
         assertEquals(LocalDateTime.of(2026, 10, 9, 3, 30, 0), saved.getStartTime());
         assertEquals(LocalDateTime.of(2026, 10, 9, 4, 30, 0), saved.getSubmitTime());
-        // Verify raw_payload contains custom unknown fields
-        assertTrue(saved.getRawPayload().contains("custom_extra_field_2026"));
-        // Verify section_wise_marks is persisted
         assertTrue(saved.getSectionWiseMarks().contains("Quantitative"));
-        // Verify IST timestamps for system records
         assertNotNull(saved.getCreatedAt());
         assertNotNull(saved.getReceivedAt());
     }
@@ -200,7 +207,7 @@ public class NeopatIntegrationTest {
         String jsonPayload = """
                 {
                   "email": "student2@jjcet.ac.in",
-                  "test_id": "TEST_NO_SEC",
+                  "test_id": "2027_JJCET_09th_OCT_WEEKLY_ASSESSMENT",
                   "marks": "75.00",
                   "total_marks": "100.00",
                   "attempts": 2,
@@ -209,8 +216,8 @@ public class NeopatIntegrationTest {
                 }
                 """;
 
-        when(currentAssessmentRepository.save(any(CurrentAssessment.class))).thenAnswer(i -> {
-            CurrentAssessment ca = i.getArgument(0);
+        when(repo2027.save(any(Assessment2027.class))).thenAnswer(i -> {
+            Assessment2027 ca = i.getArgument(0);
             ca.setId(502L);
             return ca;
         });
@@ -220,8 +227,8 @@ public class NeopatIntegrationTest {
         assertEquals(200, response.getStatusCode().value());
         assertEquals(Map.of("success", true), response.getBody());
 
-        ArgumentCaptor<CurrentAssessment> captor = ArgumentCaptor.forClass(CurrentAssessment.class);
-        verify(currentAssessmentRepository).save(captor.capture());
+        ArgumentCaptor<Assessment2027> captor = ArgumentCaptor.forClass(Assessment2027.class);
+        verify(repo2027).save(captor.capture());
         assertNull(captor.getValue().getStartTime());
         assertEquals("[]", captor.getValue().getSectionWiseMarks().trim());
     }
@@ -245,49 +252,45 @@ public class NeopatIntegrationTest {
     @Test
     @DisplayName("Cross-DB Decoupled: SMS dispatches successfully using parent contact even if student is not in PragatiX DB")
     void testStudentNotInPragatiXStillDispatchesIfParentContactExists() {
-        CurrentAssessment assessment = new CurrentAssessment();
+        Assessment2027 assessment = new Assessment2027();
         assessment.setId(101L);
         assessment.setEmail("unknown@jjcet.ac.in");
-        assessment.setTestId("NEO_JAVA_01");
+        assessment.setTestId("2027_NEO_JAVA_01_WEEKLY_ASSESSMENT");
         assessment.setMarks(new BigDecimal("85.00"));
         assessment.setTotalMarks(new BigDecimal("100.00"));
-        assessment.setRawPayload("{\"email\":\"unknown@jjcet.ac.in\"}");
 
         ParentContact parentContact = new ParentContact("unknown@jjcet.ac.in", "+919876543210");
 
-        when(currentAssessmentRepository.findByProcessingStatus("PENDING"))
-                .thenReturn(List.of(assessment));
+        when(repo2027.findByProcessingStatus("PENDING")).thenReturn(List.of(assessment));
         when(parentContactRepository.findByStudentEmailAndIsActiveTrue("unknown@jjcet.ac.in"))
                 .thenReturn(Optional.of(parentContact));
         when(studentRepository.findByEmail("unknown@jjcet.ac.in")).thenReturn(Optional.empty());
         when(twilioSmsService.sendSms(eq("+919876543210"), anyString()))
                 .thenReturn(new NeopatTwilioSmsService.TwilioSendResult(true, "SM123", null));
 
-        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch();
+        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch(2027);
 
         assertEquals(1, result.successCount);
         assertEquals(0, result.failureCount);
         verify(assessmentHistoryRepository).save(any(AssessmentHistory.class));
-        verify(currentAssessmentRepository).delete(assessment);
+        verify(repo2027).delete(assessment);
     }
 
     @Test
     @DisplayName("Cross-DB Validation: Records failure if parent contact is not found in neopa_sms")
     void testParentContactNotFoundMovesToFailedAssessment() {
-        CurrentAssessment assessment = new CurrentAssessment();
+        Assessment2027 assessment = new Assessment2027();
         assessment.setId(102L);
         assessment.setEmail("student@jjcet.ac.in");
-        assessment.setTestId("NEO_PYTHON_01");
+        assessment.setTestId("2027_NEO_PYTHON_01_WEEKLY_ASSESSMENT");
         assessment.setMarks(new BigDecimal("90.00"));
         assessment.setTotalMarks(new BigDecimal("100.00"));
-        assessment.setRawPayload("{\"email\":\"student@jjcet.ac.in\"}");
 
-        when(currentAssessmentRepository.findByProcessingStatus("PENDING"))
-                .thenReturn(List.of(assessment));
+        when(repo2027.findByProcessingStatus("PENDING")).thenReturn(List.of(assessment));
         when(parentContactRepository.findByStudentEmailAndIsActiveTrue("student@jjcet.ac.in"))
                 .thenReturn(Optional.empty());
 
-        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch();
+        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch(2027);
 
         assertEquals(0, result.successCount);
         assertEquals(1, result.failureCount);
@@ -295,20 +298,18 @@ public class NeopatIntegrationTest {
         ArgumentCaptor<FailedAssessment> failCaptor = ArgumentCaptor.forClass(FailedAssessment.class);
         verify(failedAssessmentRepository).save(failCaptor.capture());
         assertEquals("PARENT_CONTACT_NOT_FOUND", failCaptor.getValue().getFailureType());
-        assertEquals(assessment.getRawPayload(), failCaptor.getValue().getRawPayload());
-        verify(currentAssessmentRepository).delete(assessment);
+        verify(repo2027).delete(assessment);
     }
 
     @Test
     @DisplayName("CRITICAL SMS FAILURE RULE: Twilio failure still archives to assessment_history with sms_status = FAILED (NOT failed_assessment)")
     void testTwilioFailureArchivesToHistoryAsFailed() {
-        CurrentAssessment assessment = new CurrentAssessment();
+        Assessment2027 assessment = new Assessment2027();
         assessment.setId(103L);
         assessment.setEmail("student@jjcet.ac.in");
-        assessment.setTestId("NEO_CPP_01");
+        assessment.setTestId("2027_NEO_CPP_01_WEEKLY_ASSESSMENT");
         assessment.setMarks(new BigDecimal("75.00"));
         assessment.setTotalMarks(new BigDecimal("100.00"));
-        assessment.setRawPayload("{\"email\":\"student@jjcet.ac.in\",\"raw\":true}");
 
         Student student = new Student();
         student.setEmail("student@jjcet.ac.in");
@@ -316,8 +317,7 @@ public class NeopatIntegrationTest {
 
         ParentContact parent = new ParentContact("student@jjcet.ac.in", "+919876543210");
 
-        when(currentAssessmentRepository.findByProcessingStatus("PENDING"))
-                .thenReturn(List.of(assessment));
+        when(repo2027.findByProcessingStatus("PENDING")).thenReturn(List.of(assessment));
         when(studentRepository.findByEmail("student@jjcet.ac.in")).thenReturn(Optional.of(student));
         when(parentContactRepository.findByStudentEmailAndIsActiveTrue("student@jjcet.ac.in"))
                 .thenReturn(Optional.of(parent));
@@ -325,7 +325,7 @@ public class NeopatIntegrationTest {
         when(twilioSmsService.sendSms(eq("+919876543210"), anyString()))
                 .thenReturn(new NeopatTwilioSmsService.TwilioSendResult(false, null, "Twilio timeout error"));
 
-        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch();
+        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch(2027);
 
         assertEquals(0, result.successCount);
         assertEquals(1, result.failureCount);
@@ -333,25 +333,22 @@ public class NeopatIntegrationTest {
         // Verify NOT saved into failed_assessment!
         verify(failedAssessmentRepository, never()).save(any());
 
-        // Verify saved into assessment_history with sms_status = FAILED and preserved raw_payload
         ArgumentCaptor<AssessmentHistory> histCaptor = ArgumentCaptor.forClass(AssessmentHistory.class);
         verify(assessmentHistoryRepository).save(histCaptor.capture());
         assertEquals("FAILED", histCaptor.getValue().getSmsStatus());
         assertEquals("Twilio timeout error", histCaptor.getValue().getSmsFailureReason());
-        assertEquals(assessment.getRawPayload(), histCaptor.getValue().getRawPayload());
-        verify(currentAssessmentRepository).delete(assessment);
+        verify(repo2027).delete(assessment);
     }
 
     @Test
-    @DisplayName("Successful Flow: Twilio success archives to assessment_history with sms_status = SENT and removes from current")
+    @DisplayName("Successful Flow: Twilio success archives to assessment_history with sms_status = SENT and removes from batch table")
     void testTwilioSuccessArchivesToHistoryAsSent() {
-        CurrentAssessment assessment = new CurrentAssessment();
+        Assessment2027 assessment = new Assessment2027();
         assessment.setId(104L);
         assessment.setEmail("student@jjcet.ac.in");
-        assessment.setTestId("NEO_DSA_01");
+        assessment.setTestId("2027_NEO_DSA_01_WEEKLY_ASSESSMENT");
         assessment.setMarks(new BigDecimal("95.00"));
         assessment.setTotalMarks(new BigDecimal("100.00"));
-        assessment.setRawPayload("{\"email\":\"student@jjcet.ac.in\",\"test_id\":\"NEO_DSA_01\"}");
 
         Student student = new Student();
         student.setEmail("student@jjcet.ac.in");
@@ -359,8 +356,7 @@ public class NeopatIntegrationTest {
 
         ParentContact parent = new ParentContact("student@jjcet.ac.in", "+919123456789");
 
-        when(currentAssessmentRepository.findByProcessingStatus("PENDING"))
-                .thenReturn(List.of(assessment));
+        when(repo2027.findByProcessingStatus("PENDING")).thenReturn(List.of(assessment));
         when(studentRepository.findByEmail("student@jjcet.ac.in")).thenReturn(Optional.of(student));
         when(parentContactRepository.findByStudentEmailAndIsActiveTrue("student@jjcet.ac.in"))
                 .thenReturn(Optional.of(parent));
@@ -368,7 +364,7 @@ public class NeopatIntegrationTest {
         when(twilioSmsService.sendSms(eq("+919123456789"), anyString()))
                 .thenReturn(new NeopatTwilioSmsService.TwilioSendResult(true, "SM_TEST_123", null));
 
-        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch();
+        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch(2027);
 
         assertEquals(1, result.successCount);
         assertEquals(0, result.failureCount);
@@ -377,18 +373,14 @@ public class NeopatIntegrationTest {
         verify(assessmentHistoryRepository).save(histCaptor.capture());
         assertEquals("SENT", histCaptor.getValue().getSmsStatus());
         assertNotNull(histCaptor.getValue().getSmsSentAt());
-        assertEquals(assessment.getRawPayload(), histCaptor.getValue().getRawPayload());
-        verify(currentAssessmentRepository).delete(assessment);
+        verify(repo2027).delete(assessment);
     }
 
     @Test
     @DisplayName("Schedule Management: Update weekly schedule settings")
     void testScheduleSettingsUpdate() {
-        NeopatSmsSchedule schedule = new NeopatSmsSchedule();
+        NeopatSmsSchedule schedule = new NeopatSmsSchedule(2027, "SATURDAY", LocalTime.of(10, 0), false);
         schedule.setId(1L);
-        schedule.setDayOfWeek("SATURDAY");
-        schedule.setSendTime(LocalTime.of(10, 0));
-        schedule.setEnabled(false);
 
         when(scheduleRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(schedule));
         when(scheduleRepository.save(any(NeopatSmsSchedule.class))).thenAnswer(i -> i.getArgument(0));

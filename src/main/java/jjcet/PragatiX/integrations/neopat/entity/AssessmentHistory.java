@@ -8,13 +8,18 @@ import java.time.LocalDateTime;
 @Table(name = "assessment_history", indexes = {
         @Index(name = "idx_hist_email", columnList = "email"),
         @Index(name = "idx_hist_test_id", columnList = "test_id"),
-        @Index(name = "idx_hist_sms_status", columnList = "sms_status")
+        @Index(name = "idx_hist_sms_status", columnList = "sms_status"),
+        @Index(name = "idx_hist_batch_email", columnList = "batch_year, email"),
+        @Index(name = "idx_hist_batch_status", columnList = "batch_year, sms_status")
 })
 public class AssessmentHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "batch_year")
+    private Integer batchYear;
 
     @Column(name = "source_assessment_id")
     private Long sourceAssessmentId;
@@ -24,6 +29,9 @@ public class AssessmentHistory {
 
     @Column(name = "test_id", nullable = false, length = 100)
     private String testId;
+
+    @Column(name = "test_name", length = 255)
+    private String testName;
 
     @Column(name = "marks", nullable = false, precision = 7, scale = 2)
     private BigDecimal marks;
@@ -45,9 +53,6 @@ public class AssessmentHistory {
 
     @Column(name = "section_wise_marks", columnDefinition = "JSON")
     private String sectionWiseMarks;
-
-    @Column(name = "raw_payload", columnDefinition = "JSON")
-    private String rawPayload;
 
     @Column(name = "sms_status", nullable = false, length = 50)
     private String smsStatus; // 'SENT' or 'FAILED'
@@ -86,6 +91,14 @@ public class AssessmentHistory {
         this.id = id;
     }
 
+    public Integer getBatchYear() {
+        return batchYear;
+    }
+
+    public void setBatchYear(Integer batchYear) {
+        this.batchYear = batchYear;
+    }
+
     public Long getSourceAssessmentId() {
         return sourceAssessmentId;
     }
@@ -108,6 +121,14 @@ public class AssessmentHistory {
 
     public void setTestId(String testId) {
         this.testId = testId;
+    }
+
+    public String getTestName() {
+        return testName;
+    }
+
+    public void setTestName(String testName) {
+        this.testName = testName;
     }
 
     public BigDecimal getMarks() {
@@ -204,13 +225,5 @@ public class AssessmentHistory {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public String getRawPayload() {
-        return rawPayload;
-    }
-
-    public void setRawPayload(String rawPayload) {
-        this.rawPayload = rawPayload;
     }
 }

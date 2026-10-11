@@ -5,12 +5,17 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "neopat_sms_schedule")
+@Table(name = "neopat_sms_schedule", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_schedule_batch_year", columnNames = {"batch_year"})
+})
 public class NeopatSmsSchedule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "batch_year", nullable = false, unique = true)
+    private Integer batchYear;
 
     @Column(name = "day_of_week", nullable = false, length = 20)
     private String dayOfWeek = "SATURDAY";
@@ -36,6 +41,14 @@ public class NeopatSmsSchedule {
     public NeopatSmsSchedule() {
     }
 
+    public NeopatSmsSchedule(Integer batchYear, String dayOfWeek, LocalTime sendTime, Boolean enabled) {
+        this.batchYear = batchYear;
+        this.dayOfWeek = dayOfWeek != null ? dayOfWeek : "SATURDAY";
+        this.sendTime = sendTime != null ? sendTime : LocalTime.of(10, 0, 0);
+        this.enabled = enabled != null ? enabled : false;
+        this.timezone = "Asia/Kolkata";
+    }
+
     @PrePersist
     public void onPrePersist() {
         java.time.ZoneId ist = java.time.ZoneId.of("Asia/Kolkata");
@@ -58,6 +71,14 @@ public class NeopatSmsSchedule {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Integer getBatchYear() {
+        return batchYear;
+    }
+
+    public void setBatchYear(Integer batchYear) {
+        this.batchYear = batchYear;
     }
 
     public String getDayOfWeek() {

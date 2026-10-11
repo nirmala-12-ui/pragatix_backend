@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.*;
 import java.time.temporal.ChronoUnit;
-import java.util.Optional;
+import java.util.List;
 
 @Component
 public class NeopatSmsBatchScheduler {
@@ -39,17 +39,13 @@ public class NeopatSmsBatchScheduler {
 
     /**
      * Periodic lightweight check every 60 seconds against neopa_sms.neopat_sms_schedule.
-     * Evaluates schedule in Asia/Kolkata timezone and guarantees idempotency.
+     * Evaluates independent schedules for all batches (2027, 2028, 2029, 2030) in Asia/Kolkata timezone
+     * and guarantees per-batch idempotency and fault isolation.
      */
     @Scheduled(cron = "0 * * * * *")
     public void evaluateAndExecuteSchedule() {
-        Optional<NeopatSmsSchedule> scheduleOpt = scheduleRepository.findFirstByOrderByIdAsc();
-        if (scheduleOpt.isEmpty()) {
-            return;
-        }
-
-        NeopatSmsSchedule schedule = scheduleOpt.get();
-        if (!Boolean.TRUE.equals(schedule.getEnabled())) {
+        List<NeopatSmsSchedule> schedules = scheduleRepository.findAllByOrderByBatchYearAsc();
+        if (schedules.isEmpty()) {
             return;
         }
 
@@ -58,70 +54,82 @@ public class NeopatSmsBatchScheduler {
         LocalTime currentTime = nowKolkata.toLocalTime().truncatedTo(ChronoUnit.MINUTES);
         LocalDate currentDate = nowKolkata.toLocalDate();
 
-        // 1. Verify Day of Week
-        if (!currentDay.name().equalsIgnoreCase(schedule.getDayOfWeek())) {
-            return;
-        }
+        for (NeopatSmsSchedule schedule : schedules) {
+            Integer batchYear = schedule.getBatchYear();
+            if (batchYear == null) {
+                continue;
+            }
 
-        // 2. Verify Time Window (matches minute)
-        LocalTime targetTime = schedule.getSendTime().truncatedTo(ChronoUnit.MINUTES);
-        if (currentTime.getHour() != targetTime.getHour() || currentTime.getMinute() != targetTime.getMinute()) {
-            return;
-        }
+            // 1. Check enabled
+            if (!Boolean.TRUE.equals(schedule.getEnabled())) {
+                continue;
+            }
 
-        // 3. Guarantee Idempotency using DB-2 neopat_sms_execution
-        boolean alreadyExecuted = executionRepository.existsByScheduledDateAndScheduledTime(currentDate, targetTime);
-        if (alreadyExecuted) {
-            log.debug("Neopat SMS batch already executed for date: {} time: {}", currentDate, targetTime);
-            return;
-        }
+            // 2. Verify Day of Week
+            if (!currentDay.name().equalsIgnoreCase(schedule.getDayOfWeek())) {
+                continue;
+            }
 
-        log.info("Triggering scheduled Neopat SMS batch for date: {} at time: {}", currentDate, targetTime);
+            // 3. Verify Time Window (matches minute)
+            LocalTime targetTime = schedule.getSendTime().truncatedTo(ChronoUnit.MINUTES);
+            if (currentTime.getHour() != targetTime.getHour() || currentTime.getMinute() != targetTime.getMinute()) {
+                continue;
+            }
 
-        // Record execution start
-        NeopatSmsExecution execution = new NeopatSmsExecution(currentDate, targetTime, "IN_PROGRESS");
-        execution = executionRepository.save(execution);
+            // 4. Guarantee Idempotency per batch using neopat_sms_execution
+            boolean alreadyExecuted = executionRepository.existsByBatchYearAndScheduledDateAndScheduledTime(batchYear, currentDate, targetTime);
+            if (alreadyExecuted) {
+                log.debug("Neopat SMS batch already executed for Batch: {} date: {} time: {}", batchYear, currentDate, targetTime);
+                continue;
+            }
 
-        auditLogService.logEvent(
-                "SMS_EXECUTION",
-                String.valueOf(execution.getId()),
-                "SMS_SCHEDULER_STARTED",
-                "IN_PROGRESS",
-                "Started weekly scheduled SMS dispatch batch for " + currentDate + " " + targetTime,
-                null
-        );
+            log.info("Triggering scheduled Neopat SMS batch for Batch: {} date: {} at time: {}", batchYear, currentDate, targetTime);
 
-        try {
-            NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch();
-
-            execution.setStatus("COMPLETED");
-            execution.setCompletedAt(LocalDateTime.now());
-            execution.setSuccessCount(result.successCount);
-            execution.setFailureCount(result.failureCount);
-            executionRepository.save(execution);
+            // 5. Record execution start
+            NeopatSmsExecution execution = new NeopatSmsExecution(batchYear, currentDate, targetTime, "IN_PROGRESS");
+            execution = executionRepository.save(execution);
 
             auditLogService.logEvent(
                     "SMS_EXECUTION",
                     String.valueOf(execution.getId()),
-                    "SMS_SCHEDULER_COMPLETED",
-                    "SUCCESS",
-                    String.format("Completed weekly SMS batch. Success: %d, Failures: %d", result.successCount, result.failureCount),
+                    "SMS_SCHEDULER_STARTED",
+                    "IN_PROGRESS",
+                    "Started weekly scheduled SMS dispatch for Batch " + batchYear + " on " + currentDate + " " + targetTime,
                     null
             );
-        } catch (Exception e) {
-            log.error("Fatal error during scheduled SMS batch: {}", e.getMessage(), e);
-            execution.setStatus("FAILED");
-            execution.setCompletedAt(LocalDateTime.now());
-            executionRepository.save(execution);
 
-            auditLogService.logEvent(
-                    "SMS_EXECUTION",
-                    String.valueOf(execution.getId()),
-                    "SMS_SCHEDULER_FAILED",
-                    "FAILED",
-                    "Batch failed with error: " + e.getMessage(),
-                    null
-            );
+            try {
+                NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.processPendingAssessmentsBatch(batchYear);
+
+                execution.setStatus("COMPLETED");
+                execution.setCompletedAt(LocalDateTime.now(KOLKATA_ZONE));
+                execution.setSuccessCount(result.successCount);
+                execution.setFailureCount(result.failureCount);
+                executionRepository.save(execution);
+
+                auditLogService.logEvent(
+                        "SMS_EXECUTION",
+                        String.valueOf(execution.getId()),
+                        "SMS_SCHEDULER_COMPLETED",
+                        "SUCCESS",
+                        String.format("Completed weekly SMS batch for Batch %d. Success: %d, Failures: %d", batchYear, result.successCount, result.failureCount),
+                        null
+                );
+            } catch (Exception e) {
+                log.error("Fatal error during scheduled SMS batch for Batch {}: {}", batchYear, e.getMessage(), e);
+                execution.setStatus("FAILED");
+                execution.setCompletedAt(LocalDateTime.now(KOLKATA_ZONE));
+                executionRepository.save(execution);
+
+                auditLogService.logEvent(
+                        "SMS_EXECUTION",
+                        String.valueOf(execution.getId()),
+                        "SMS_SCHEDULER_FAILED",
+                        "FAILED",
+                        "Batch " + batchYear + " failed with error: " + e.getMessage(),
+                        null
+                );
+            }
         }
     }
 }

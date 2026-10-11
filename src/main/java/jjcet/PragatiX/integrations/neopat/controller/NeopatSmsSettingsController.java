@@ -13,6 +13,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/integrations/neopat/sms")
 @Tag(name = "NeopatSmsSettingsController", description = "Super Admin Neopat SMS Settings and Testing APIs")
@@ -25,9 +27,53 @@ public class NeopatSmsSettingsController {
         this.orchestrationService = orchestrationService;
     }
 
+    @GetMapping("/batch-settings")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SUPERADMIN')")
+    @Operation(summary = "Get SMS schedule configurations and metrics for all batches (2027-2030)")
+    public ResponseEntity<ApiResponse<List<NeopatBatchSmsConfigDto>>> getAllBatchSettings() {
+        List<NeopatBatchSmsConfigDto> settings = orchestrationService.getAllBatchSettings();
+        return ResponseEntity.ok(ApiResponse.ok("Neopat batch SMS configurations retrieved successfully", settings));
+    }
+
+    @GetMapping("/batch-settings/{batchYear}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SUPERADMIN')")
+    @Operation(summary = "Get SMS schedule configuration and metrics for a specific batch year")
+    public ResponseEntity<ApiResponse<NeopatBatchSmsConfigDto>> getBatchSettings(@PathVariable Integer batchYear) {
+        NeopatBatchSmsConfigDto settings = orchestrationService.getBatchSettings(batchYear);
+        return ResponseEntity.ok(ApiResponse.ok("Batch " + batchYear + " SMS configuration retrieved successfully", settings));
+    }
+
+    @PutMapping("/batch-settings/{batchYear}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SUPERADMIN')")
+    @Operation(summary = "Update SMS schedule configuration for a specific batch year")
+    public ResponseEntity<ApiResponse<NeopatBatchSmsConfigDto>> updateBatchSettings(
+            @PathVariable Integer batchYear,
+            @Valid @RequestBody NeopatSmsScheduleDto scheduleDto) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String updatedBy = auth != null ? auth.getName() : "SUPER_ADMIN";
+
+        NeopatBatchSmsConfigDto updated = orchestrationService.updateBatchSettings(batchYear, scheduleDto, updatedBy);
+        return ResponseEntity.ok(ApiResponse.ok("Batch " + batchYear + " SMS schedule updated successfully", updated));
+    }
+
+    @PostMapping("/batch-settings/{batchYear}/trigger")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SUPERADMIN')")
+    @Operation(summary = "Manually trigger SMS dispatch for a specific batch year")
+    public ResponseEntity<ApiResponse<NeopatSmsOrchestrationService.BatchExecutionResult>> triggerManualBatchRun(
+            @PathVariable Integer batchYear) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String triggeredBy = auth != null ? auth.getName() : "SUPER_ADMIN";
+
+        NeopatSmsOrchestrationService.BatchExecutionResult result = orchestrationService.triggerManualBatchRun(batchYear, triggeredBy);
+        return ResponseEntity.ok(ApiResponse.ok("Manual SMS dispatch triggered for Batch " + batchYear, result));
+    }
+
+    // Legacy endpoints preserved for backward compatibility
     @GetMapping("/settings")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SUPERADMIN')")
-    @Operation(summary = "Get Neopat SMS weekly schedule settings")
+    @Operation(summary = "Get Neopat SMS weekly schedule settings (legacy)")
     public ResponseEntity<ApiResponse<NeopatSmsSettingsResponseDto>> getSettings() {
         NeopatSmsSettingsResponseDto settings = orchestrationService.getSettings();
         return ResponseEntity.ok(ApiResponse.ok("Neopat SMS settings retrieved successfully", settings));
@@ -35,7 +81,7 @@ public class NeopatSmsSettingsController {
 
     @PutMapping("/settings")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SUPERADMIN')")
-    @Operation(summary = "Update Neopat SMS weekly schedule settings")
+    @Operation(summary = "Update Neopat SMS weekly schedule settings (legacy)")
     public ResponseEntity<ApiResponse<NeopatSmsSettingsResponseDto>> updateSettings(
             @Valid @RequestBody NeopatSmsScheduleDto scheduleDto) {
 

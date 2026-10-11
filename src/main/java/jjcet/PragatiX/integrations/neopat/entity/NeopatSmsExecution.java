@@ -7,13 +7,16 @@ import java.time.LocalTime;
 
 @Entity
 @Table(name = "neopat_sms_execution", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_exec_date_time", columnNames = {"scheduled_date", "scheduled_time"})
+        @UniqueConstraint(name = "uk_exec_batch_date_time", columnNames = {"batch_year", "scheduled_date", "scheduled_time"})
 })
 public class NeopatSmsExecution {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "batch_year", nullable = false)
+    private Integer batchYear;
 
     @Column(name = "scheduled_date", nullable = false)
     private LocalDate scheduledDate;
@@ -42,12 +45,17 @@ public class NeopatSmsExecution {
     public NeopatSmsExecution() {
     }
 
-    public NeopatSmsExecution(LocalDate scheduledDate, LocalTime scheduledTime, String status) {
+    public NeopatSmsExecution(Integer batchYear, LocalDate scheduledDate, LocalTime scheduledTime, String status) {
+        this.batchYear = batchYear;
         this.scheduledDate = scheduledDate;
         this.scheduledTime = scheduledTime;
         this.status = status;
         this.startedAt = LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"));
         this.createdAt = LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+    }
+
+    public NeopatSmsExecution(LocalDate scheduledDate, LocalTime scheduledTime, String status) {
+        this(2027, scheduledDate, scheduledTime, status);
     }
 
     @PrePersist
@@ -67,6 +75,14 @@ public class NeopatSmsExecution {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Integer getBatchYear() {
+        return batchYear;
+    }
+
+    public void setBatchYear(Integer batchYear) {
+        this.batchYear = batchYear;
     }
 
     public LocalDate getScheduledDate() {

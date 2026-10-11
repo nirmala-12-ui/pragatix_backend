@@ -4,13 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "current_assessment", indexes = {
-        @Index(name = "idx_curr_email", columnList = "email"),
-        @Index(name = "idx_curr_test_id", columnList = "test_id"),
-        @Index(name = "idx_curr_status", columnList = "processing_status")
-})
-public class CurrentAssessment {
+@MappedSuperclass
+public abstract class BaseBatchAssessment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,6 +16,9 @@ public class CurrentAssessment {
 
     @Column(name = "test_id", nullable = false, length = 100)
     private String testId;
+
+    @Column(name = "test_name", length = 255)
+    private String testName;
 
     @Column(name = "marks", nullable = false, precision = 7, scale = 2)
     private BigDecimal marks;
@@ -43,9 +41,6 @@ public class CurrentAssessment {
     @Column(name = "section_wise_marks", columnDefinition = "JSON")
     private String sectionWiseMarks;
 
-    @Column(name = "raw_payload", columnDefinition = "JSON")
-    private String rawPayload;
-
     @Column(name = "processing_status", nullable = false, length = 50)
     private String processingStatus = "PENDING";
 
@@ -54,6 +49,8 @@ public class CurrentAssessment {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+
+    public abstract Integer getBatchYear();
 
     @PrePersist
     public void onPrePersist() {
@@ -66,7 +63,7 @@ public class CurrentAssessment {
         }
     }
 
-    public CurrentAssessment() {
+    public BaseBatchAssessment() {
     }
 
     public Long getId() {
@@ -91,6 +88,14 @@ public class CurrentAssessment {
 
     public void setTestId(String testId) {
         this.testId = testId;
+    }
+
+    public String getTestName() {
+        return testName;
+    }
+
+    public void setTestName(String testName) {
+        this.testName = testName;
     }
 
     public BigDecimal getMarks() {
@@ -171,13 +176,5 @@ public class CurrentAssessment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public String getRawPayload() {
-        return rawPayload;
-    }
-
-    public void setRawPayload(String rawPayload) {
-        this.rawPayload = rawPayload;
     }
 }

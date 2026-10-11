@@ -14,4 +14,8 @@ public interface AssessmentHistoryRepository extends JpaRepository<AssessmentHis
     List<AssessmentHistory> findByTestId(String testId);
 
     List<AssessmentHistory> findBySmsStatus(String smsStatus);
+
+    List<AssessmentHistory> findByBatchYear(Integer batchYear);
+
+    long countByBatchYear(Integer batchYear);
 }

@@ -69,8 +69,9 @@ public class NeopatTwilioSmsService {
             String auth = twilioConfig.getAccountSid() + ":" + twilioConfig.getAuthToken();
             String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
 
+            String formattedTo = formatE164(toPhoneNumber);
             MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-            formData.add("To", toPhoneNumber);
+            formData.add("To", formattedTo);
             formData.add("From", twilioConfig.getFromNumber());
             formData.add("Body", messageBody);
 
@@ -92,5 +93,18 @@ public class NeopatTwilioSmsService {
             log.error("Twilio SMS delivery failed for {}: {}", toPhoneNumber, e.getMessage());
             return new TwilioSendResult(false, null, e.getMessage());
         }
+    }
+
+    private String formatE164(String phone) {
+        if (!StringUtils.hasText(phone)) return phone;
+        String clean = phone.trim().replaceAll("[\\s-]", "");
+        if (!clean.startsWith("+")) {
+            if (clean.length() == 10) {
+                return "+91" + clean;
+            } else if (clean.length() == 12 && clean.startsWith("91")) {
+                return "+" + clean;
+            }
+        }
+        return clean;
     }
 }
