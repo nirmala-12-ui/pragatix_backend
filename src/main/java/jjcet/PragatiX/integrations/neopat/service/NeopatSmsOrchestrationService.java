@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
@@ -398,7 +399,7 @@ public class NeopatSmsOrchestrationService {
             if (nextDate.isBefore(now) || nextDate.isEqual(now)) {
                 nextDate = nextDate.plusWeeks(1);
             }
-            return nextDate.toString();
+            return nextDate.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         } catch (Exception e) {
             return null;
         }
