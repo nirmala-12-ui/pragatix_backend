@@ -16,10 +16,17 @@ public final class NeopatBatchAssessmentFilter {
 
     public static final Set<Integer> SUPPORTED_BATCHES = Set.of(2027, 2028, 2029, 2030);
 
-    // Matches beginning with 4-digit batch year followed by separator, and contains WEEKLY_ASSESSMENT
-    private static final Pattern BATCH_YEAR_PREFIX_PATTERN = Pattern.compile("^(\\d{4})[_-].*", Pattern.CASE_INSENSITIVE);
-    private static final Pattern WEEKLY_ASSESSMENT_PATTERN = Pattern.compile(".*WEEKLY[_-]ASSESSMENT.*", Pattern.CASE_INSENSITIVE);
-    private static final Pattern DAILY_ASSESSMENT_PATTERN = Pattern.compile(".*DAILY[_-]ASSESSMENT.*", Pattern.CASE_INSENSITIVE);
+    // Matches beginning with 4-digit batch year followed by separator
+    private static final Pattern BATCH_YEAR_PREFIX_PATTERN = Pattern.compile("^(\\d{4})[\\-_ ].*", Pattern.CASE_INSENSITIVE);
+    // Accepts combinations such as WEEK, WEEKLY, A WEEK, A_WEEK with ASSESSMENT, numbers, or standalone
+    private static final Pattern WEEKLY_ASSESSMENT_PATTERN = Pattern.compile(
+            ".*(^|[\\-_ ])(WEEKLY|A[\\-_ ]*WEEK|WEEK)([\\-_ ]|\\d|ASSESSMENT|TEST|$).*",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern DAILY_ASSESSMENT_PATTERN = Pattern.compile(
+            ".*(^|[\\-_ ])DAILY([\\-_ ]|ASSESSMENT|TEST|$).*",
+            Pattern.CASE_INSENSITIVE
+    );
 
     public record FilterResult(boolean accepted, Integer batchYear, String reason) {
         public static FilterResult accept(int batchYear) {

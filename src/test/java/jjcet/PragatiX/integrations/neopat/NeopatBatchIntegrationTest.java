@@ -10,6 +10,7 @@ import jjcet.PragatiX.integrations.neopat.entity.*;
 import jjcet.PragatiX.integrations.neopat.repository.*;
 import jjcet.PragatiX.integrations.neopat.scheduler.NeopatSmsBatchScheduler;
 import jjcet.PragatiX.integrations.neopat.service.*;
+import jjcet.PragatiX.integrations.neopat.util.NeopatBatchAssessmentFilter;
 import jjcet.PragatiX.modules.student.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -155,6 +156,27 @@ public class NeopatBatchIntegrationTest {
         verify(repo2027, never()).save(any());
         verify(repo2028, never()).save(any());
         verify(repo2030, never()).save(any());
+    }
+
+    // 1b. Test name variants for weekly assessments: WEEK, WEEKLY, A WEEK, A_WEEK
+    @Test
+    @DisplayName("Scenario 1b: Accepts week variants such as WEEK, WEEKLY, A WEEK, A_WEEK")
+    void testWeeklyAssessmentVariantsAccepted() {
+        List<String> validTestNames = List.of(
+                "2029_JJCET_08th_OCT_WEEK_ASSESSMENT",
+                "2029_JJCET_08th_OCT_WEEKLY_ASSESSMENT",
+                "2029_JJCET_08th_OCT_A_WEEK_ASSESSMENT",
+                "2029_JJCET_08th_OCT_A WEEK ASSESSMENT",
+                "2029_JJCET_WEEK_1_ASSESSMENT",
+                "2029_JJCET_WEEKLY",
+                "2029_JJCET_WEEK"
+        );
+
+        for (String testName : validTestNames) {
+            var result = NeopatBatchAssessmentFilter.evaluate(testName);
+            assertTrue(result.accepted(), "Should accept: " + testName + " but got: " + result.reason());
+            assertEquals(2029, result.batchYear());
+        }
     }
 
     // 2. A valid weekly assessment for each supported batch (2027, 2028, 2029, 2030) stored in corresponding table
