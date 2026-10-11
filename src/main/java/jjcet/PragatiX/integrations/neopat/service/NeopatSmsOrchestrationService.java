@@ -142,15 +142,22 @@ public class NeopatSmsOrchestrationService {
                         studentName, scoreStr, testId, analysisUrl
                 );
 
-                // 4. Send SMS via Twilio
+                // 4. Send SMS via Twilio (decrypting parent mobile safely if needed)
+                String rawMobile = parentContact.getParentMobile();
+                String plainMobile = (rawMobile != null && rawMobile.startsWith(jjcet.PragatiX.util.crypto.AesGcmEncryptionUtil.PREFIX))
+                        ? jjcet.PragatiX.util.crypto.AesGcmEncryptionUtil.decrypt(rawMobile)
+                        : rawMobile;
+
                 NeopatTwilioSmsService.TwilioSendResult twilioResult =
-                        twilioSmsService.sendSms(parentContact.getParentMobile(), smsMessage);
+                        twilioSmsService.sendSms(plainMobile, smsMessage);
+
+                String maskedMobile = jjcet.PragatiX.integrations.neopat.dto.ParentContactResponseDto.maskMobile(plainMobile);
 
                 // 5. CRITICAL RULE: Assessment Failure != SMS Failure
                 if (twilioResult.isSuccess()) {
                     archiveToHistory(assessment, "SENT", null);
                     auditLogService.logEvent("ASSESSMENT_" + effectiveBatch, String.valueOf(assessment.getId()),
-                            "SMS_SENT", "SUCCESS", "SMS successfully dispatched for Batch " + effectiveBatch + " to " + parentContact.getParentMobile(), null);
+                            "SMS_SENT", "SUCCESS", "SMS successfully dispatched for Batch " + effectiveBatch + " to " + maskedMobile, null);
                     successCount++;
                 } else {
                     log.error("Twilio SMS failed for assessment {} (Batch {}): {}", assessment.getId(), effectiveBatch, twilioResult.getErrorMessage());

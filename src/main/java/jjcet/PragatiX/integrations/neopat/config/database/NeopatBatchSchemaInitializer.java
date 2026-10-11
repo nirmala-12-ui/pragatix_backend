@@ -15,6 +15,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
+import jjcet.PragatiX.util.crypto.AesGcmEncryptionUtil;
 
 /**
  * Ensures database schema migration replacing current_assessment with separate
@@ -46,6 +47,7 @@ public class NeopatBatchSchemaInitializer implements ApplicationRunner {
             ensureAuxiliaryColumns(conn);
             dropOldExecutionConstraintIfPresent(conn);
             seedDefaultBatchSchedules(conn);
+            ensureParentContactEncryptedSchemaAndMigrate(conn);
             log.info("NeopatBatchSchemaInitializer completed successfully.");
         } catch (Exception e) {
             log.error("Failed to execute NeopatBatchSchemaInitializer: {}", e.getMessage(), e);
@@ -240,6 +242,77 @@ public class NeopatBatchSchemaInitializer implements ApplicationRunner {
         } catch (Exception e) {
             log.debug("Ignored exception during SQL execution [{}]: {}", sql, e.getMessage());
             return 0;
+        }
+    }
+
+    private void ensureParentContactEncryptedSchemaAndMigrate(Connection conn) {
+        try {
+            DatabaseMetaData metaData = conn.getMetaData();
+            boolean tableExists = false;
+            try (ResultSet rs = metaData.getTables(null, null, "parent_contact", new String[]{"TABLE"})) {
+                if (rs.next()) {
+                    tableExists = true;
+                }
+            }
+
+            if (!tableExists) {
+                log.info("parent_contact table not found; creating with encrypted schema...");
+                String createTableSql = "CREATE TABLE IF NOT EXISTS parent_contact (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "student_email VARCHAR(255) NOT NULL, " +
+                        "parent_mobile VARCHAR(255) NOT NULL, " +
+                        "is_active BOOLEAN NOT NULL DEFAULT TRUE, " +
+                        "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_parent_student_email (student_email), " +
+                        "INDEX idx_parent_active (is_active)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+                executeUpdate(conn, createTableSql);
+                return;
+            }
+
+            // 1. Ensure parent_mobile is VARCHAR(255) to support AES-256-GCM ciphertext
+            try {
+                executeUpdate(conn, "ALTER TABLE parent_contact MODIFY COLUMN parent_mobile VARCHAR(255) NOT NULL");
+            } catch (Exception e) {
+                log.warn("Could not alter parent_mobile column length: {}", e.getMessage());
+            }
+
+            // 2. Safe, resumable data migration: Encrypt legacy plaintext phone numbers
+            int migratedCount = 0;
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT id, parent_mobile FROM parent_contact")) {
+
+                while (rs.next()) {
+                    long id = rs.getLong("id");
+                    String mobile = rs.getString("parent_mobile");
+
+                    if (mobile != null && !mobile.trim().isEmpty() && !mobile.startsWith(AesGcmEncryptionUtil.PREFIX)) {
+                        String encrypted = AesGcmEncryptionUtil.encrypt(mobile.trim());
+                        String decrypted = AesGcmEncryptionUtil.decrypt(encrypted);
+                        if (!mobile.trim().equals(decrypted)) {
+                            log.error("Integrity check failed: decryption mismatch for contact id {}", id);
+                            continue;
+                        }
+
+                        try (PreparedStatement update = conn.prepareStatement("UPDATE parent_contact SET parent_mobile = ? WHERE id = ?")) {
+                            update.setString(1, encrypted);
+                            update.setLong(2, id);
+                            update.executeUpdate();
+                            migratedCount++;
+                        }
+                    }
+                }
+            }
+
+            if (migratedCount > 0) {
+                log.info("Successfully encrypted {} legacy plaintext parent mobile records in parent_contact.", migratedCount);
+            } else {
+                log.info("parent_contact table is fully encrypted and up-to-date.");
+            }
+
+        } catch (Exception e) {
+            log.error("Error during parent_contact encryption migration: {}", e.getMessage(), e);
         }
     }
 }

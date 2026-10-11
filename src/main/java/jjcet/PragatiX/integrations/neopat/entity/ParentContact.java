@@ -21,7 +21,8 @@ public class ParentContact {
     @Column(name = "student_email", nullable = false, unique = true)
     private String studentEmail;
 
-    @Column(name = "parent_mobile", nullable = false, length = 20)
+    @Convert(converter = jjcet.PragatiX.util.crypto.AesGcmAttributeConverter.class)
+    @Column(name = "parent_mobile", nullable = false, length = 255)
     private String parentMobile;
 
     @Column(name = "is_active", nullable = false)

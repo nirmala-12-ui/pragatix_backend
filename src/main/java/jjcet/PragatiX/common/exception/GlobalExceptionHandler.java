@@ -147,10 +147,10 @@ public class GlobalExceptionHandler {
 
     // ==================== 3. Resource & Data Errors (4xx) ====================
 
-    @ExceptionHandler(StudentNotFoundException.class)
+    @ExceptionHandler({StudentNotFoundException.class, ResourceNotFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiResponse<Void> handleStudentNotFound(StudentNotFoundException ex) {
-        log.warn("Student not found: {}", ex.getMessage());
+    public ApiResponse<Void> handleStudentNotFound(RuntimeException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
         return ApiResponse.error(ex.getMessage());
     }
 
