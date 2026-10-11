@@ -41,10 +41,7 @@ public class NeopatApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String incomingKey = request.getHeader("x-apikey");
-        if (!StringUtils.hasText(incomingKey)) {
-            incomingKey = request.getHeader("x-api-key");
-        }
+        String incomingKey = request.getHeader(API_KEY_HEADER);
 
         if (!StringUtils.hasText(incomingKey) || !StringUtils.hasText(configuredApiKey) || !constantTimeEquals(incomingKey, configuredApiKey)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
