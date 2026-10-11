@@ -6,6 +6,7 @@ public class ParentContactResponseDto {
 
     private Long id;
     private String studentEmail;
+    private String parentMobile;
     private String parentMobileMasked;
     private Boolean isActive;
     private LocalDateTime createdAt;
@@ -16,8 +17,14 @@ public class ParentContactResponseDto {
 
     public ParentContactResponseDto(Long id, String studentEmail, String parentMobileMasked, Boolean isActive,
                                     LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, studentEmail, null, parentMobileMasked, isActive, createdAt, updatedAt);
+    }
+
+    public ParentContactResponseDto(Long id, String studentEmail, String parentMobile, String parentMobileMasked,
+                                    Boolean isActive, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.studentEmail = studentEmail;
+        this.parentMobile = parentMobile;
         this.parentMobileMasked = parentMobileMasked;
         this.isActive = isActive;
         this.createdAt = createdAt;
@@ -38,6 +45,14 @@ public class ParentContactResponseDto {
 
     public void setStudentEmail(String studentEmail) {
         this.studentEmail = studentEmail;
+    }
+
+    public String getParentMobile() {
+        return parentMobile;
+    }
+
+    public void setParentMobile(String parentMobile) {
+        this.parentMobile = parentMobile;
     }
 
     public String getParentMobileMasked() {

@@ -67,7 +67,7 @@ public class NeopatParentContactService {
     public ParentContactResponseDto getContactById(Long id) {
         ParentContact contact = parentContactRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student contact mapping not found with id: " + id));
-        return mapToResponseDto(contact);
+        return mapToDetailResponseDto(contact);
     }
 
     /**
@@ -100,7 +100,7 @@ public class NeopatParentContactService {
                 null
         );
 
-        return mapToResponseDto(saved);
+        return mapToDetailResponseDto(saved);
     }
 
     /**
@@ -141,7 +141,7 @@ public class NeopatParentContactService {
                 null
         );
 
-        return mapToResponseDto(updated);
+        return mapToDetailResponseDto(updated);
     }
 
     /**
@@ -168,7 +168,6 @@ public class NeopatParentContactService {
     }
 
     private ParentContactResponseDto mapToResponseDto(ParentContact entity) {
-        // entity.getParentMobile() is automatically decrypted by AesGcmAttributeConverter
         String plainOrDecrypted = entity.getParentMobile();
         if (plainOrDecrypted != null && plainOrDecrypted.startsWith(AesGcmEncryptionUtil.PREFIX)) {
             plainOrDecrypted = AesGcmEncryptionUtil.decrypt(plainOrDecrypted);
@@ -178,6 +177,25 @@ public class NeopatParentContactService {
         return new ParentContactResponseDto(
                 entity.getId(),
                 entity.getStudentEmail(),
+                null,
+                masked,
+                entity.getIsActive(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
+    }
+
+    private ParentContactResponseDto mapToDetailResponseDto(ParentContact entity) {
+        String plainOrDecrypted = entity.getParentMobile();
+        if (plainOrDecrypted != null && plainOrDecrypted.startsWith(AesGcmEncryptionUtil.PREFIX)) {
+            plainOrDecrypted = AesGcmEncryptionUtil.decrypt(plainOrDecrypted);
+        }
+        String masked = ParentContactResponseDto.maskMobile(plainOrDecrypted);
+
+        return new ParentContactResponseDto(
+                entity.getId(),
+                entity.getStudentEmail(),
+                plainOrDecrypted,
                 masked,
                 entity.getIsActive(),
                 entity.getCreatedAt(),
