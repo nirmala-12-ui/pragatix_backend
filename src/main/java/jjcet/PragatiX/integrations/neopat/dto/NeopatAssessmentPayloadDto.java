@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jjcet.PragatiX.integrations.neopat.util.NeopatBatchAssessmentFilter;
 import jjcet.PragatiX.integrations.neopat.util.NeopatDateTimeUtil;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -22,11 +23,16 @@ public class NeopatAssessmentPayloadDto {
 
     @NotBlank(message = "Test ID is required")
     @JsonProperty("test_id")
-    @JsonAlias({"test_id", "testId", "assessment_id"})
+    @JsonAlias({"test_id", "testId", "assessment_id", "assessmentId", "exam_id", "examId", "exam_code", "examCode", "test_code", "testCode", "code", "id"})
     private String testId;
 
     @JsonProperty("test_name")
-    @JsonAlias({"test_name", "testname", "assessmentname", "assessment_name"})
+    @JsonAlias({
+        "test_name", "testname", "test_title", "testTitle",
+        "assessmentname", "assessment_name", "assessment_title", "assessmentTitle",
+        "exam_name", "examName", "exam_title", "examTitle",
+        "title", "name", "exam"
+    })
     private String testName;
 
     @NotNull(message = "Marks obtained is required")
@@ -85,6 +91,16 @@ public class NeopatAssessmentPayloadDto {
     }
 
     public String getEffectiveTestName() {
+        if (testName != null && !testName.trim().isEmpty()) {
+            if (NeopatBatchAssessmentFilter.evaluate(testName).accepted()) {
+                return testName.trim();
+            }
+        }
+        if (testId != null && !testId.trim().isEmpty()) {
+            if (NeopatBatchAssessmentFilter.evaluate(testId).accepted()) {
+                return testId.trim();
+            }
+        }
         if (testName != null && !testName.trim().isEmpty()) {
             return testName.trim();
         }

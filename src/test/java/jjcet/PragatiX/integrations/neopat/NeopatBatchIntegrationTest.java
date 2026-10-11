@@ -179,6 +179,36 @@ public class NeopatBatchIntegrationTest {
         }
     }
 
+    // 1c. Payload with title instead of test_name and arbitrary test_id like TEST-001
+    @Test
+    @DisplayName("Scenario 1c: Payload with title instead of test_name and arbitrary test_id like TEST-001 is accepted for batch 2029")
+    void testPayloadWithTitleAndArbitraryTestIdAccepted() {
+        String payloadJson = """
+                {
+                  "email": "student2029@jjcet.ac.in",
+                  "title": "2029_JJCET_08th_OCT_WEEKLY_ASSESSMENT",
+                  "test_id": "TEST-001",
+                  "marks": 85.5,
+                  "total_marks": 100.0
+                }
+                """;
+
+        when(repo2029.save(any(Assessment2029.class))).thenAnswer(i -> i.getArgument(0));
+
+        ResponseEntity<Map<String, Boolean>> response = inboundController.receiveAssessment(payloadJson);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals(Boolean.TRUE, response.getBody().get("success"));
+
+        ArgumentCaptor<Assessment2029> captor = ArgumentCaptor.forClass(Assessment2029.class);
+        verify(repo2029).save(captor.capture());
+        Assessment2029 saved = captor.getValue();
+
+        assertEquals(2029, saved.getBatchYear());
+        assertEquals("2029_JJCET_08th_OCT_WEEKLY_ASSESSMENT", saved.getTestName());
+        assertEquals("TEST-001", saved.getTestId());
+    }
+
     // 2. A valid weekly assessment for each supported batch (2027, 2028, 2029, 2030) stored in corresponding table
     @Test
     @DisplayName("Scenario 2: Valid weekly assessments for all supported batches stored in respective tables")

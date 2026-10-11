@@ -44,9 +44,12 @@ public class NeopatInboundAssessmentController {
                 return ResponseEntity.badRequest().body(Map.of("success", false));
             }
 
+            log.info("Received Neopat inbound raw payload: {}", rawPayload);
+
+            JsonNode root;
             // 1. Pre-parse check & extract email if possible
             try {
-                JsonNode root = objectMapper.readTree(rawPayload);
+                root = objectMapper.readTree(rawPayload);
                 if (root != null && root.has("email")) {
                     extractedEmail = root.get("email").asText();
                 }
@@ -58,6 +61,12 @@ public class NeopatInboundAssessmentController {
 
             // 2. Map to DTO
             NeopatAssessmentPayloadDto payload = objectMapper.readValue(rawPayload, NeopatAssessmentPayloadDto.class);
+            if (payload.getTestName() == null || payload.getTestName().isBlank()) {
+                String candidate = findTestNameInJson(root);
+                if (candidate != null && !candidate.isBlank()) {
+                    payload.setTestName(candidate);
+                }
+            }
 
             // 3. Validate required fields
             String testIdentifier = payload.getEffectiveTestName();
@@ -94,5 +103,32 @@ public class NeopatInboundAssessmentController {
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false));
         }
+    }
+
+    private String findTestNameInJson(JsonNode root) {
+        if (root == null) return null;
+        String[] candidateFields = {
+                "title", "test_name", "testname", "exam_title", "examTitle",
+                "exam_name", "examName", "test_title", "testTitle",
+                "assessment_name", "assessmentname", "assessment_title", "assessmentTitle",
+                "name"
+        };
+        for (String field : candidateFields) {
+            if (root.hasNonNull(field)) {
+                return root.get(field).asText();
+            }
+        }
+        String[] nestedObjects = {"exam", "assessment", "test"};
+        for (String nested : nestedObjects) {
+            if (root.has(nested) && root.get(nested).isObject()) {
+                JsonNode obj = root.get(nested);
+                for (String field : candidateFields) {
+                    if (obj.hasNonNull(field)) {
+                        return obj.get(field).asText();
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
